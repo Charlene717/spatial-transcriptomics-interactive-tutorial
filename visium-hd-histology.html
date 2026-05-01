@@ -1,0 +1,225 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 15: Visium HD & Histology — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html" class="active">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 15 / 15</div>
+<h1 data-zh="Visium HD 與病理影像整合：跨模態的最後一哩" data-en="Visium HD & Histology Integration: the cross-modal last mile">Visium HD 與病理影像整合：跨模態最後一哩</h1>
+<p class="subtitle" data-lang="zh">2 µm bin 的單細胞解析 + 視覺 foundation model，把 H&E 形態與表達一起學起來。</p>
+<p class="subtitle" data-lang="en">2 µm-bin near-single-cell resolution + vision foundation models that learn morphology and expression jointly.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="Visium HD" data-en="VISIUM HD">Visium HD</div>
+<h2 data-zh="一、Visium HD 的 bin 概念" data-en="I. The Visium HD bin concept">一、Visium HD 的 bin 概念</h2>
+<div data-lang="zh">
+<p>Visium HD 用 <strong>2 µm × 2 µm 的 oligonucleotide squares 連續鋪滿</strong>整片 chip——比經典 Visium 的 55 µm spot 約小 750 倍。但 2 µm 一格的單獨表達非常稀疏，因此 Space Ranger 同時輸出多個 bin 大小：</p>
+<ul>
+<li><strong>2 µm</strong>：原始 bin。極稀疏，只在 BANKSY/segmentation 重新聚合時用。</li>
+<li><strong>8 µm</strong>：<strong>10x 推薦預設分析單位</strong>。雖非真正單細胞，但能準確定位 scRNA 細胞類型。</li>
+<li><strong>16 µm</strong>：訊號比較飽滿，適合先建立區塊概念。</li>
+</ul>
+<p>Seurat v5 / spatialdata-io 都可以把多個 bin 同時載入成多個 assay，可在不同分析步驟切換。</p>
+</div>
+<div data-lang="en">
+<p>Visium HD covers the chip with <strong>continuous 2 µm × 2 µm oligonucleotide squares</strong> — about 750× smaller than the classic Visium 55 µm spot. Single 2 µm bins are very sparse, so Space Ranger emits multiple bin sizes:</p>
+<ul>
+<li><strong>2 µm</strong>: raw bin. Very sparse — only used when re-aggregating with BANKSY / segmentation.</li>
+<li><strong>8 µm</strong>: <strong>10x's recommended default</strong>. Not truly single-cell, but accurately localizes scRNA cell types.</li>
+<li><strong>16 µm</strong>: more saturated signal — good for establishing region structure first.</li>
+</ul>
+<p>Seurat v5 / spatialdata-io can load multiple bins simultaneously as multi-assay objects to switch between analysis steps.</p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="HD 工作流程" data-en="HD WORKFLOW">HD 工作流程</div>
+<h2 data-zh="二、HD 流程的四個關鍵步驟" data-en="II. Four key steps in the HD workflow">二、HD 流程關鍵步驟</h2>
+<div class="workflow">
+<div class="workflow-step" data-step="1"><h4 data-zh="Sketching：先抽樣" data-en="Sketching: subsample first">Sketching</h4><p data-lang="zh">HD 動輒 1–2 百萬 bin，記憶體吃不消。用 Seurat <code>SketchData</code> 抽 50 k bins 跑分群、再 project 回完整資料。</p><p data-lang="en">HD often produces 1–2 M bins. Use Seurat <code>SketchData</code> to subsample ~50 k bins, cluster, then project back.</p></div>
+<div class="workflow-step" data-step="2"><h4 data-zh="BANKSY clustering" data-en="BANKSY clustering">BANKSY clustering</h4><p data-lang="zh">2/8 µm bin 的 noise 高，BANKSY 的鄰域平均能顯著穩定 cluster；Seurat v5 已內建。</p><p data-lang="en">Noise at 2/8 µm is high; BANKSY's neighborhood averaging stabilizes clusters dramatically. Built into Seurat v5.</p></div>
+<div class="workflow-step" data-step="3"><h4 data-zh="cell-binning：把 2 µm 聚合到 segmentation cell" data-en="Cell binning: aggregate 2 µm to segmentation cells">cell-binning</h4><p data-lang="zh">用 Cellpose 對 H&E 做 segmentation，再把屬於同一細胞的 2 µm bin 加總，得到「<strong>真正單細胞</strong>」AnnData。</p><p data-lang="en">Run Cellpose on H&E, then sum 2 µm bins inside each segmented cell to get a <strong>truly single-cell</strong> AnnData.</p></div>
+<div class="workflow-step" data-step="4"><h4 data-zh="跨樣本：sketching + Harmony" data-en="Cross-sample: sketching + Harmony">跨樣本整合</h4><p data-lang="zh">JEFworks 2025 教學示範：HD 多樣本用 sketching + Harmony 是當前最實際方案。</p><p data-lang="en">Per the JEFworks 2025 guide: sketching + Harmony is currently the most practical recipe for multi-sample HD.</p></div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="Histology 整合" data-en="HISTOLOGY">Histology 整合</div>
+<h2 data-zh="三、把 H&E 影像跟表達一起學" data-en="III. Learning H&E and expression jointly">三、H&E + 表達雙模態</h2>
+<div data-lang="zh">
+<p>Visium / Visium HD / Xenium 都自帶 H&E 或 DAPI 影像，但傳統流程只把影像當「視覺對位工具」。2024–2025 出現一系列<strong>視覺 foundation model</strong>，把 H&E 形態跟基因表達在同一個 latent space 訓練：</p>
+<ul>
+<li><strong>HEST-1k (NeurIPS 2024)</strong>：1 229 個 ST sample + WSI 配對的開源資料集，是訓練/評估 vision foundation model 的核心 benchmark。</li>
+<li><strong>Vision-omics foundation model (Nat Methods 2025)</strong>：聯合預訓練 H&E patch + spot expression，可從 H&E 預測表達、或用表達輔助組織分類。</li>
+<li><strong>Thor (Nat Comm 2025)</strong>：把 ST 提升到 cell-level，整合形態學特徵做下游分析。</li>
+<li><strong>SpaGCN</strong>（已在 Step 6 介紹）：較早期把 H&E 顏色直接當 GNN 節點特徵。</li>
+</ul>
+<p>典型用途：</p>
+<ul>
+<li>用 H&E 對「未測 ST 的切片」<strong>預測</strong> spatial expression（節省經費）</li>
+<li>把 ST cluster 解釋成<strong>形態學定義</strong>的組織分類（病理對照）</li>
+<li>從 H&E 找出「形態相似但表達不同」的隱藏亞群</li>
+</ul>
+</div>
+<div data-lang="en">
+<p>Visium / Visium HD / Xenium ship with H&E or DAPI imaging, but classic pipelines treat the image only as a "visual alignment tool." 2024–2025 saw a wave of <strong>vision foundation models</strong> that train H&E morphology and gene expression in a shared latent space:</p>
+<ul>
+<li><strong>HEST-1k (NeurIPS 2024)</strong>: 1 229 paired ST + WSI samples — the core open benchmark for training / evaluating vision-omics models.</li>
+<li><strong>Vision-omics foundation model (Nat Methods 2025)</strong>: jointly pretrained on H&E patches + spot expression; can predict expression from H&E or use expression to refine tissue typing.</li>
+<li><strong>Thor (Nat Comm 2025)</strong>: lifts ST to cell-level by integrating morphological features for downstream tasks.</li>
+<li><strong>SpaGCN</strong> (Step 6): early use of H&E color as direct node features in a GNN.</li>
+</ul>
+<p>Typical applications:</p>
+<ul>
+<li><strong>Predict</strong> spatial expression for un-profiled sections from H&E (saves cost)</li>
+<li>Re-interpret ST clusters via <strong>morphology-defined</strong> tissue classes (pathology cross-check)</li>
+<li>Discover hidden subpopulations that look the same morphologically but differ in expression</li>
+</ul>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：bin 大小如何影響訊噪比" data-en="Interactive: bin size and signal-to-noise">互動：bin 大小 vs 訊噪</h2>
+<div data-lang="zh"><p>下圖：底色是模擬的解剖區塊（ground truth），方格是不同 bin 大小的「該基因是否被偵測」。觀察 2 µm 太稀疏、16 µm 又太粗。</p></div>
+<div data-lang="en"><p>Background = ground-truth anatomy; squares = "gene detected at this bin." 2 µm is too sparse; 16 µm is too coarse.</p></div>
+<div class="interactive-panel">
+<div class="toggle-row">
+<button class="toggle-btn" id="b2" data-zh="2 µm bin" data-en="2 µm bin">2 µm</button>
+<button class="toggle-btn active" id="b8" data-zh="8 µm bin (推薦)" data-en="8 µm bin (recommended)">8 µm (推薦)</button>
+<button class="toggle-btn" id="b16" data-zh="16 µm bin" data-en="16 µm bin">16 µm</button>
+</div>
+<div class="canvas-container"><canvas id="hdCanvas" width="700" height="320"></canvas></div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / Seurat HD + Sketching</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / spatialdata-io + HEST</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># 載入 Visium HD 多 bin</span>
+hd &lt;- <span class="func">Load10X_Spatial</span>(<span class="str">"hd_out/binned_outputs/"</span>, bin.size = <span class="func">c</span>(<span class="num">8</span>, <span class="num">16</span>))
+
+<span class="comment"># Sketching → 抽 50 k bins 跑 PCA + cluster</span>
+<span class="func">DefaultAssay</span>(hd) &lt;- <span class="str">"Spatial.008um"</span>
+hd &lt;- <span class="func">NormalizeData</span>(hd) |&gt; <span class="func">FindVariableFeatures</span>() |&gt; <span class="func">ScaleData</span>()
+hd &lt;- <span class="func">SketchData</span>(hd, ncells = <span class="num">50000</span>, method = <span class="str">"LeverageScore"</span>, sketched.assay = <span class="str">"sketch"</span>)
+<span class="func">DefaultAssay</span>(hd) &lt;- <span class="str">"sketch"</span>
+hd &lt;- <span class="func">RunPCA</span>(hd) |&gt; <span class="func">FindNeighbors</span>() |&gt; <span class="func">FindClusters</span>(resolution = <span class="num">0.5</span>) |&gt; <span class="func">RunUMAP</span>(dims = <span class="num">1</span>:<span class="num">30</span>)
+
+<span class="comment"># Project 回 full bins</span>
+hd &lt;- <span class="func">ProjectData</span>(hd, sketched.assay = <span class="str">"sketch"</span>, assay = <span class="str">"Spatial.008um"</span>,
+                  full.reduction = <span class="str">"full.pca"</span>, dims = <span class="num">1</span>:<span class="num">30</span>)
+<span class="func">SpatialDimPlot</span>(hd, label = <span class="kw">TRUE</span>)</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="comment"># spatialdata-io 載入 HD</span>
+<span class="kw">import</span> spatialdata_io <span class="kw">as</span> sd_io
+sdata = sd_io.visium_hd(<span class="str">"hd_out/"</span>, bin_size=[<span class="num">8</span>, <span class="num">16</span>])
+
+<span class="comment"># HEST dataset (HuggingFace) - 用於 vision-omics foundation model</span>
+<span class="kw">from</span> hest <span class="kw">import</span> HESTReader
+reader = HESTReader(); st_obj = reader.read(<span class="str">"TENX95"</span>)  <span class="comment"># 一個 sample</span>
+
+<span class="comment"># 範例：用 H&E patch 訓練 / 推論 expression</span>
+<span class="kw">import</span> torch
+patch = extract_patch(st_obj.wsi, x=<span class="num">2400</span>, y=<span class="num">1700</span>, size=<span class="num">224</span>)
+expr  = vision_omics_model(torch.tensor(patch))</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">1. 10x Genomics 對於 Visium HD 推薦的預設 bin 大小？</p>
+<p data-lang="en">1. 10x Genomics' recommended default bin for Visium HD?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 2 µm</span><span data-lang="en">A. 2 µm</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 8 µm</span><span data-lang="en">B. 8 µm</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 16 µm</span><span data-lang="en">C. 16 µm</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 55 µm</span><span data-lang="en">D. 55 µm</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">2. 對於記憶體吃不消的 HD 大資料，什麼策略最實用？</p>
+<p data-lang="en">2. Most practical strategy for memory-intensive HD data?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. Sketching：抽樣 50 k bins 跑分析、再 project 回去</span><span data-lang="en">A. Sketching: subsample 50k bins, then project back</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 一次載入全部</span><span data-lang="en">B. Load everything at once</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 拒絕分析</span><span data-lang="en">C. Refuse to analyze</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 隨機刪除 90% bin</span><span data-lang="en">D. Randomly delete 90% of bins</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">3. HEST-1k 的角色是？</p>
+<p data-lang="en">3. Role of HEST-1k?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 是新的 segmentation 工具</span><span data-lang="en">A. A new segmentation tool</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 是 BANKSY 的替代品</span><span data-lang="en">B. A BANKSY alternative</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 1229 個 ST + WSI 配對的開源資料集，用來訓練 vision-omics foundation model</span><span data-lang="en">C. Open dataset of 1 229 paired ST + WSI samples for training vision-omics foundation models</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 全新的定序平台</span><span data-lang="en">D. A new sequencing platform</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="segmentation.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 14: Segmentation</span></a>
+<a href="index.html"><span class="nav-dir" data-zh="🎉 回首頁" data-en="🎉 Back to home">🎉 回首頁</span><span class="nav-title" data-zh="完成全部 15 章" data-en="Completed all 15 chapters">完成全部 15 章</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+const W=700,H=320,CV=document.getElementById('hdCanvas'),CTX=CV.getContext('2d');
+function regionAt(x,y){
+  // 3 anatomic regions defined by x bands + curve
+  const yShift = 22*Math.sin(x/55);
+  if (y + yShift < H*0.35) return 0;        // region 0
+  if (y + yShift < H*0.7) return 1;          // region 1
+  return 2;
+}
+const regionExpr=[0.85,0.05,0.55]; // expression probability per region for the gene
+function draw(bin){
+  let bs;
+  if(bin==='2') bs=4;       // visual scale: small
+  else if(bin==='8') bs=14;
+  else bs=28;
+  CTX.clearRect(0,0,W,H);
+  // background gt regions
+  for(let x=0;x<W;x+=8) for(let y=0;y<H;y+=8){
+    const rg = regionAt(x,y);
+    const cols=['rgba(91,62,150,0.16)','rgba(232,160,73,0.10)','rgba(58,154,124,0.16)'];
+    CTX.fillStyle=cols[rg]; CTX.fillRect(x,y,8,8);
+  }
+  // draw bin grid
+  for(let x=2;x<W-bs;x+=bs+1){
+    for(let y=2;y<H-bs;y+=bs+1){
+      const rg = regionAt(x+bs/2,y+bs/2);
+      // detection probability shrinks for tiny bins (sparse)
+      const sparseFactor = bin==='2'? 0.18 : bin==='8'? 0.7 : 0.95;
+      const detected = Math.random() < regionExpr[rg]*sparseFactor;
+      CTX.fillStyle = detected? '#5b3e96' : 'rgba(0,0,0,0.0)';
+      CTX.strokeStyle = 'rgba(0,0,0,0.05)'; CTX.lineWidth=0.5;
+      if(detected) CTX.fillRect(x,y,bs,bs);
+    }
+  }
+}
+function setBin(id){['b2','b8','b16'].forEach(b=>document.getElementById(b).classList.toggle('active',b===id));}
+document.getElementById('b2').onclick=()=>{setBin('b2');draw('2');};
+document.getElementById('b8').onclick=()=>{setBin('b8');draw('8');};
+document.getElementById('b16').onclick=()=>{setBin('b16');draw('16');};
+draw('8');
+
+const QF={
+  zh:{q1_y:'10x 推薦 8 µm 為預設分析單位。',q1_n:'正確答案已標示。',q2_y:'Sketching + project 是當前 HD 標準作法。',q2_n:'正確答案已標示。',q3_y:'HEST-1k 是 vision-omics 的核心 benchmark。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'10x recommends 8 µm as the default unit.',q1_n:'Correct answer highlighted.',q2_y:'Sketching + project-back is the standard HD recipe.',q2_n:'Correct answer highlighted.',q3_y:'HEST-1k is the central benchmark for vision-omics.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
