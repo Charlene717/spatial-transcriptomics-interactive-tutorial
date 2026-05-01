@@ -1,0 +1,272 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 3: QC — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html" class="active">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 3 / 15</div>
+<h1 data-zh="品質管控：空間 QC 跟 scRNA 不一樣" data-en="Quality Control: spatial QC differs from scRNA-seq">品質管控：空間 QC 跟 scRNA 不一樣</h1>
+<p class="subtitle" data-lang="zh">spot 不等於 cell；組織覆蓋與空間鄰域離群是 ST QC 的核心。</p>
+<p class="subtitle" data-lang="en">A spot is not a cell. Tissue coverage and spatially-aware outliers are the heart of ST QC.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="關鍵差異" data-en="KEY DIFFERENCE">關鍵差異</div>
+<h2 data-zh="一、為什麼 scRNA QC 不能直接套到 ST？" data-en="I. Why scRNA QC doesn't drop into ST">一、為什麼 scRNA QC 不能直接套到 ST？</h2>
+<div data-lang="zh">
+<p>在 scRNA-seq，「一個 barcode = 一個細胞」是基本假設。在 ST 上這個假設只在 image-based 平台成立。對於 Visium 這類 55 µm spot，<strong>一個 spot 可能涵蓋 0、1、5、甚至 10 個細胞</strong>。所以：</p>
+<ul>
+<li><strong>nFeature 高</strong>不一定是 doublet——可能只是 spot 裡細胞多。</li>
+<li><strong>MT% 高</strong>不一定是死細胞——可能該區是肌肉/心臟組織。</li>
+<li>過濾要先依<strong>組織區塊 (tissue region)</strong> 做分組，再下手。</li>
+</ul>
+<p>另一個 ST 特有的問題：<strong>組織覆蓋 (tissue coverage)</strong>。capture array 上必有些 spot 落在組織外，這些必須先排除。Space Ranger / Loupe 會給 <code>in_tissue</code> 標籤。</p>
+</div>
+<div data-lang="en">
+<p>In scRNA-seq, "one barcode = one cell" is foundational. That only holds for image-based ST platforms. For Visium-style 55 µm spots, <strong>one spot can contain 0, 1, 5, or even 10 cells</strong>. So:</p>
+<ul>
+<li><strong>High nFeature</strong> isn't necessarily a doublet — the spot may simply contain more cells.</li>
+<li><strong>High MT%</strong> isn't necessarily dead cells — the area may be muscle/cardiac tissue.</li>
+<li>Filter <strong>by tissue region</strong>, then apply thresholds.</li>
+</ul>
+<p>An ST-specific issue: <strong>tissue coverage</strong>. Many spots on the capture array fall off-tissue and must be excluded first — Space Ranger / Loupe provides the <code>in_tissue</code> flag.</p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="核心指標" data-en="CORE METRICS">核心指標</div>
+<h2 data-zh="二、ST 的 QC 核心指標" data-en="II. Core QC metrics for ST">二、ST 的 QC 核心指標</h2>
+<div class="card-grid cols-3">
+<div class="card"><div class="card-icon">📍</div><h4 data-zh="in_tissue" data-en="in_tissue">in_tissue</h4>
+<div data-lang="zh"><p>spot 是否落在組織內。Space Ranger 自動偵測；務必檢查 H&E 影像確認沒有把組織誤判成背景。</p></div>
+<div data-lang="en"><p>Whether a spot is inside tissue. Space Ranger detects it automatically; always check the H&E image to confirm tissue isn't mis-classified as background.</p></div>
+</div>
+<div class="card"><div class="card-icon">📊</div><h4>nCount / nFeature</h4>
+<div data-lang="zh"><p>UMI 與基因數，跟 scRNA 一樣。但<strong>不要用單一閾值</strong>——應該分組織區塊看分佈。</p></div>
+<div data-lang="en"><p>UMI and gene counts, like scRNA. But <strong>don't use one global threshold</strong> — examine distributions per tissue region.</p></div>
+</div>
+<div class="card"><div class="card-icon">🔋</div><h4>percent.mt</h4>
+<div data-lang="zh"><p>MT 比例。心肌/肝組織天然偏高，過濾前先看空間圖。Visium FFPE 因為用 probe，MT% 通常較低。</p></div>
+<div data-lang="en"><p>Mitochondrial fraction. Naturally elevated in cardiac/liver tissue — view the spatial map before filtering. Probe-based Visium FFPE typically has lower MT%.</p></div>
+</div>
+<div class="card"><div class="card-icon">🧬</div><h4>percent.hb</h4>
+<div data-lang="zh"><p>血紅素基因比例。富血管組織偏高，是「該區是血液」而非「該 spot 壞」。</p></div>
+<div data-lang="en"><p>Hemoglobin fraction. Elevated in vascular regions — usually means "this region is blood-rich," not "this spot is bad."</p></div>
+</div>
+<div class="card"><div class="card-icon">🌐</div><h4 data-zh="局部離群 (SpotSweeper)" data-en="Local outlier (SpotSweeper)">局部離群</h4>
+<div data-lang="zh"><p><strong>SpotSweeper</strong> 把每個 spot 跟自己的 k-nearest spatial neighbours (Visium 用 k = 36) 比較，標記出「跟周遭格格不入」的 spot。比 global threshold 更精準。</p></div>
+<div data-lang="en"><p><strong>SpotSweeper</strong> compares every spot to its k-nearest spatial neighbors (k = 36 for Visium hex grid) and flags "out-of-context" spots — more accurate than global thresholds.</p></div>
+</div>
+<div class="card"><div class="card-icon">🩻</div><h4 data-zh="影像品質檢查" data-en="Image QC">影像品質</h4>
+<div data-lang="zh"><p>H&E 染色不均、組織皺褶、氣泡都會造成局部偏差。<strong>務必目視確認影像</strong>，並可在 Loupe 圈出可疑區。</p></div>
+<div data-lang="en"><p>Uneven H&E staining, tissue folds, bubbles all create local artifacts. <strong>Always inspect the image</strong>, and use Loupe to mask suspicious regions if needed.</p></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：global vs spatially-aware QC" data-en="Interactive: global vs spatially-aware QC">互動：global vs spatially-aware QC</h2>
+<div data-lang="zh"><p>下方左圖：spot 顏色深淺對應 nCount。拖動「全域閾值」會用單一截斷值；切換到「空間鄰域」則會比照局部鄰居。觀察哪一種會誤殺正常但低表達的組織區。</p></div>
+<div data-lang="en"><p>Left: spot color = nCount. Move the "global threshold" to use a single cutoff; switch to "spatial neighborhood" to compare each spot with its local neighbors. Notice which method mistakenly removes biologically low-expression regions.</p></div>
+<div class="interactive-panel">
+<div class="toggle-row">
+<button class="toggle-btn active" id="modeGlobal" data-zh="全域閾值" data-en="Global threshold">全域閾值</button>
+<button class="toggle-btn" id="modeLocal" data-zh="空間鄰域 (SpotSweeper-like)" data-en="Spatial neighborhood (SpotSweeper-like)">空間鄰域</button>
+</div>
+<div class="slider-group" id="globalGroup"><label><span data-zh="最低 nCount" data-en="Min nCount">最低 nCount</span> <span id="valGlobal">2000</span></label><input type="range" id="sliderGlobal" min="500" max="8000" value="2000" step="100"></div>
+<div class="slider-group" id="localGroup" style="display:none;"><label><span data-zh="鄰域 z-score 閾值" data-en="Neighborhood z-threshold">鄰域 z-score 閾值</span> <span id="valLocal">2.5</span></label><input type="range" id="sliderLocal" min="1" max="5" value="2.5" step="0.1"></div>
+<div class="sim-stats"><span class="sim-stat pass" id="qcStatKeep">—</span><span class="sim-stat fail" id="qcStatRem">—</span></div>
+<div class="canvas-container"><canvas id="qcCanvas" width="700" height="320"></canvas></div>
+<p style="font-size:.82rem;color:var(--c-ink-muted);text-align:center;"><span data-zh="灰：被剔除；紫：保留；底色色塊代表組織區塊" data-en="Gray: removed; purple: kept; background blocks = tissue regions">灰：被剔除；紫：保留；底色色塊代表組織區塊</span></p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="決策" data-en="DECISION">決策</div>
+<h2 data-zh="三、ST QC 決策流程" data-en="III. ST QC decision flow">三、ST QC 決策流程</h2>
+<div class="decision-tree">
+<h4>🌳 <span data-zh="ST QC 流程" data-en="ST QC flow">ST QC 流程</span></h4>
+<div data-lang="zh">
+<div class="dt-node"><span class="dt-q">1.</span><div>先去掉 <strong>in_tissue = FALSE</strong>。</div></div>
+<div class="dt-node"><span class="dt-q">2.</span><div>畫 <strong>spatial featureplot</strong>（nCount, nFeature, MT%）—— 看分佈是否跟組織結構吻合。</div></div>
+<div class="dt-node"><span class="dt-q">3.</span><div>是否多樣本/多切片？ <span class="dt-arrow">→ 是 →</span> 用 <strong>per-sample MAD adaptive</strong>，避免一刀切。</div></div>
+<div class="dt-node"><span class="dt-q">4.</span><div>套上 <strong>SpotSweeper</strong> 局部離群（解析 H&E 上的 fold/bubble 損傷區）。</div></div>
+<div class="dt-node"><span class="dt-q">5.</span><div>聚類後若某 cluster 全是高 MT% 又無 marker，回頭收緊。</div></div>
+</div>
+<div data-lang="en">
+<div class="dt-node"><span class="dt-q">1.</span><div>Drop spots with <strong>in_tissue = FALSE</strong>.</div></div>
+<div class="dt-node"><span class="dt-q">2.</span><div>Plot <strong>spatial feature maps</strong> (nCount, nFeature, MT%) — check whether distributions follow tissue anatomy.</div></div>
+<div class="dt-node"><span class="dt-q">3.</span><div>Multi-sample / multi-slice? <span class="dt-arrow">→ Yes →</span> use <strong>per-sample MAD adaptive</strong> thresholds.</div></div>
+<div class="dt-node"><span class="dt-q">4.</span><div>Apply <strong>SpotSweeper</strong> local outliers (catches fold/bubble damage on H&E).</div></div>
+<div class="dt-node"><span class="dt-q">5.</span><div>If a downstream cluster is all high-MT% with no markers, return and tighten.</div></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="QC 範例" data-en="QC examples">QC 範例</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / Seurat + SpotSweeper</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / Scanpy + Squidpy</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="func">library</span>(Seurat); <span class="func">library</span>(SpotSweeper); <span class="func">library</span>(SpatialExperiment)
+vis &lt;- <span class="func">Load10X_Spatial</span>(<span class="str">"visium/"</span>)
+
+<span class="comment"># 基本指標 / Basic metrics</span>
+vis[[<span class="str">"percent.mt"</span>]] &lt;- <span class="func">PercentageFeatureSet</span>(vis, pattern = <span class="str">"^MT-"</span>)
+vis[[<span class="str">"percent.hb"</span>]] &lt;- <span class="func">PercentageFeatureSet</span>(vis, pattern = <span class="str">"^HB[AB]"</span>)
+
+<span class="func">SpatialFeaturePlot</span>(vis, features = <span class="func">c</span>(<span class="str">"nCount_Spatial"</span>, <span class="str">"percent.mt"</span>))
+
+<span class="comment"># 全域簡易過濾（先寬鬆） / Lenient global filter</span>
+vis &lt;- <span class="func">subset</span>(vis, subset = nCount_Spatial &gt; <span class="num">500</span> &amp; percent.mt &lt; <span class="num">25</span>)
+
+<span class="comment"># SpotSweeper 局部離群（轉成 SpatialExperiment） / Local-outlier QC</span>
+spe &lt;- <span class="func">as.SingleCellExperiment</span>(vis) |&gt; <span class="func">as.SpatialExperiment</span>()
+spe &lt;- <span class="func">localOutliers</span>(spe, metric = <span class="str">"sum"</span>, direction = <span class="str">"lower"</span>, n_neighbors = <span class="num">36</span>)
+spe &lt;- spe[, !spe$local_outliers]</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="kw">import</span> scanpy <span class="kw">as</span> sc
+<span class="kw">import</span> squidpy <span class="kw">as</span> sq
+adata = sc.read_visium(<span class="str">"visium/"</span>)
+adata.var_names_make_unique()
+
+<span class="comment"># 標記 mt / hb 基因 / Tag mt & hb genes</span>
+adata.var[<span class="str">"mt"</span>] = adata.var_names.str.startswith(<span class="str">"MT-"</span>)
+adata.var[<span class="str">"hb"</span>] = adata.var_names.str.contains(<span class="str">"^HB[AB]"</span>)
+sc.pp.calculate_qc_metrics(adata, qc_vars=[<span class="str">"mt"</span>,<span class="str">"hb"</span>], inplace=<span class="kw">True</span>)
+
+<span class="comment"># 空間視覺化 / Spatial QC view</span>
+sq.pl.spatial_scatter(adata, color=[<span class="str">"total_counts"</span>,<span class="str">"pct_counts_mt"</span>])
+
+<span class="comment"># 簡易過濾（in_tissue 已自動套用） / Simple filter</span>
+sc.pp.filter_cells(adata, min_counts=<span class="num">500</span>)
+adata = adata[adata.obs.pct_counts_mt &lt; <span class="num">25</span>].copy()</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">1. Visium 心臟切片整片 MT% 都偏高，最佳處置？</p>
+<p data-lang="en">1. A Visium heart section has globally elevated MT%. Best response?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 用 5% 嚴格過濾</span><span data-lang="en">A. Apply strict 5% cutoff</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 完全不做 MT% 檢查</span><span data-lang="en">B. Skip MT% entirely</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 把閾值依組織特性調高，且看空間分佈是否跟解剖結構一致</span><span data-lang="en">C. Raise threshold to fit tissue biology and check spatial distribution against anatomy</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 移除所有 MT 基因</span><span data-lang="en">D. Remove all MT genes</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">2. SpotSweeper 的核心優勢是？</p>
+<p data-lang="en">2. The key advantage of SpotSweeper?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 自動估算 batch effect</span><span data-lang="en">A. Estimates batch effects</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 比較每個 spot 與其空間鄰域，找出局部離群</span><span data-lang="en">B. Compares each spot with its spatial neighborhood to flag local outliers</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 可以做 doublet detection</span><span data-lang="en">C. Performs doublet detection</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 跟 Cellpose 一樣是切割工具</span><span data-lang="en">D. Is a segmentation tool like Cellpose</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">3. 為什麼「nFeature 高」在 Visium 不一定代表 doublet？</p>
+<p data-lang="en">3. Why doesn't "high nFeature" in Visium always mean a doublet?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 因為一個 spot 本來就可能涵蓋 1–10 個細胞</span><span data-lang="en">A. Because each spot can naturally contain 1–10 cells</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 因為 Visium 不會發生 doublet</span><span data-lang="en">B. Because Visium never produces doublets</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 因為 nFeature 是錯誤的指標</span><span data-lang="en">C. Because nFeature is a wrong metric</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 因為 Visium 有 in_tissue 標籤</span><span data-lang="en">D. Because Visium has the in_tissue flag</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="platforms.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 2: Platforms</span></a>
+<a href="normalization.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 4: Normalization</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+// QC sim with two tissue regions: high (epithelium) and low (stroma) baseline counts
+const W=700,H=320,CV=document.getElementById('qcCanvas'),CTX=CV.getContext('2d');
+const spots=[];
+const cols=28, rows=14;
+for(let i=0;i<cols;i++) for(let j=0;j<rows;j++){
+  const x=20+i*((W-40)/cols)+(j%2?12:0), y=20+j*((H-40)/rows);
+  // tissue regions: left half "epithelium" high count, right half "stroma" low count
+  const region = x<W/2 ? 'epi' : 'str';
+  const base = region==='epi' ? 5500 : 1500;
+  let n = Math.max(50, base + (Math.random()-0.5)*1500);
+  // a few damaged areas (folds): random clusters with very low counts
+  spots.push({x,y,region,n});
+}
+// add some artifact spots (folds) - cluster of low-count spots in stroma
+for(let k=0;k<6;k++){
+  const cx=W*0.7+Math.random()*60, cy=H*0.4+Math.random()*60;
+  spots.forEach(s=>{const dx=s.x-cx,dy=s.y-cy;if(dx*dx+dy*dy<300) s.n=Math.max(50,s.n*0.2+50);});
+}
+function modeGlobal(){return document.getElementById('modeGlobal').classList.contains('active');}
+function neighborMean(s){
+  let sum=0,cnt=0;
+  spots.forEach(t=>{if(t===s)return;const dx=t.x-s.x,dy=t.y-s.y,d2=dx*dx+dy*dy;if(d2<900){sum+=t.n;cnt++;}});
+  return cnt? sum/cnt : s.n;
+}
+function neighborStd(s,m){
+  let sum=0,cnt=0;
+  spots.forEach(t=>{if(t===s)return;const dx=t.x-s.x,dy=t.y-s.y,d2=dx*dx+dy*dy;if(d2<900){sum+=(t.n-m)*(t.n-m);cnt++;}});
+  return cnt? Math.sqrt(sum/cnt) : 1;
+}
+function draw(){
+  CTX.clearRect(0,0,W,H);
+  // tissue background
+  CTX.fillStyle='rgba(216,194,232,0.18)'; CTX.fillRect(0,0,W/2,H);
+  CTX.fillStyle='rgba(232,200,170,0.18)'; CTX.fillRect(W/2,0,W/2,H);
+  CTX.fillStyle='#7a5008'; CTX.font='12px DM Sans,sans-serif';
+  const L=I18n.get();
+  CTX.fillText(L==='zh'?'高表達區（如上皮）':'High-expr region (epithelium)', 14, 20);
+  CTX.fillText(L==='zh'?'低表達區（如基質）':'Low-expr region (stroma)', W/2+14, 20);
+
+  const useGlobal = modeGlobal();
+  const thrG = +document.getElementById('sliderGlobal').value;
+  const thrZ = +document.getElementById('sliderLocal').value;
+  let kept=0,rem=0;
+  spots.forEach(s=>{
+    let pass;
+    if(useGlobal){pass = s.n >= thrG;}
+    else {const m=neighborMean(s); const sd=neighborStd(s,m)||1; const z=Math.abs(s.n-m)/sd; pass = z<=thrZ;}
+    if(pass) kept++; else rem++;
+    CTX.beginPath(); CTX.arc(s.x,s.y,5.5,0,Math.PI*2);
+    CTX.fillStyle = pass? 'rgba(91,62,150,0.85)' : 'rgba(120,120,120,0.55)';
+    CTX.fill();
+  });
+  document.getElementById('qcStatKeep').textContent = (L==='zh'?'保留':'Kept')+': '+kept;
+  document.getElementById('qcStatRem').textContent = (L==='zh'?'剔除':'Removed')+': '+rem;
+}
+function setMode(g){
+  document.getElementById('modeGlobal').classList.toggle('active',g);
+  document.getElementById('modeLocal').classList.toggle('active',!g);
+  document.getElementById('globalGroup').style.display = g? '' : 'none';
+  document.getElementById('localGroup').style.display = g? 'none' : '';
+  draw();
+}
+document.getElementById('modeGlobal').onclick=()=>setMode(true);
+document.getElementById('modeLocal').onclick=()=>setMode(false);
+document.getElementById('sliderGlobal').oninput=()=>{document.getElementById('valGlobal').textContent=document.getElementById('sliderGlobal').value;draw();};
+document.getElementById('sliderLocal').oninput=()=>{document.getElementById('valLocal').textContent=document.getElementById('sliderLocal').value;draw();};
+document.addEventListener('langchange',draw);
+draw();
+
+// Quiz
+const QF={
+  zh:{q1_y:'心肌組織 MT% 天然偏高，閾值要看組織背景。',q1_n:'正確答案已標示。',q2_y:'SpotSweeper 用空間鄰域 z-score 找局部離群。',q2_n:'正確答案已標示。',q3_y:'Visium 一個 spot 本來就涵蓋多個細胞。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'Cardiomyocyte MT% is naturally high — threshold must follow tissue biology.',q1_n:'Correct answer highlighted.',q2_y:'SpotSweeper uses spatial-neighborhood z-scores for local outliers.',q2_n:'Correct answer highlighted.',q3_y:'A Visium spot natively contains multiple cells.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
