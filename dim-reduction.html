@@ -1,0 +1,183 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 5: Dimensionality Reduction — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html" class="active">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 5 / 15</div>
+<h1 data-zh="降維與特徵：把空間鄰域寫進 embedding" data-en="Dimensionality Reduction: encode spatial context into the embedding">降維與特徵：把空間鄰域寫進 embedding</h1>
+<p class="subtitle" data-lang="zh">HVG → PCA → UMAP 是基本款；BANKSY 把空間鄰域納入嵌入是 ST 才有的把戲。</p>
+<p class="subtitle" data-lang="en">HVG → PCA → UMAP is the baseline; BANKSY's spatially-aware embedding is unique to ST.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="兩條路" data-en="TWO PATHS">兩條路</div>
+<h2 data-zh="一、scRNA-style 降維 vs 空間感知降維" data-en="I. scRNA-style vs spatially-aware reduction">一、scRNA-style 降維 vs 空間感知降維</h2>
+<div data-lang="zh">
+<p>傳統 ST 流程沿用 scRNA：HVG → PCA → UMAP / Leiden。這是<strong>「忽略空間」</strong>的做法，PCA 完才把分群結果疊回 spatial map。優點：簡單、可重現、跟 scRNA 工具完全相容。缺點：相鄰 spot 的相似性沒被 model 學進去——只有<strong>後處理</strong>時才看得出空間結構。</p>
+<p>空間感知方法（BANKSY、SpaceFlow embedding、STAGATE encoder）則把<strong>每個 spot 的鄰域平均表達量</strong>當成額外特徵串入向量，所以降維後的 embedding 同時反映「我表達什麼」與「我周遭的鄰居表達什麼」。後續 cluster 自然會傾向形成<strong>空間連續</strong>的區塊。</p>
+</div>
+<div data-lang="en">
+<p>The classic ST pipeline mirrors scRNA: HVG → PCA → UMAP / Leiden. This <strong>"ignores space"</strong> — clusters are computed first, then layered back on the spatial map. Pros: simple, reproducible, fully compatible with the scRNA toolchain. Cons: spot-spot adjacency isn't modeled — spatial structure is only visible <strong>post hoc</strong>.</p>
+<p>Spatially-aware methods (BANKSY, SpaceFlow encoder, STAGATE) concatenate <strong>each spot's neighborhood mean expression</strong> as extra features, so the embedding reflects both "what I express" and "what my neighbors express." Downstream clusters then form <strong>spatially-contiguous</strong> regions naturally.</p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="HVG vs SVG" data-en="HVG vs SVG">HVG vs SVG</h2>
+<h2 data-zh="二、特徵選擇：HVG 還是 SVG？" data-en="II. Feature selection: HVG or SVG?">二、特徵選擇：HVG 還是 SVG？</h2>
+<div class="card-grid cols-2">
+<div class="card"><h4 data-zh="HVG (Highly Variable Genes)" data-en="HVG (Highly Variable Genes)">HVG (Highly Variable Genes)</h4>
+<div data-lang="zh"><p>「整體變異最大」的基因。<strong>不考慮空間</strong>。常用 mean–variance trend (Seurat <code>vst</code>)、Pearson residuals。</p><p>適用：和 scRNA 一致流程、初步探索。</p></div>
+<div data-lang="en"><p>Genes with largest overall variance. <strong>Spatial-agnostic</strong>. Common: mean–variance trend (Seurat <code>vst</code>), Pearson residuals.</p><p>Use: scRNA-aligned workflow, quick exploration.</p></div>
+</div>
+<div class="card"><h4 data-zh="SVG (Spatially Variable Genes)" data-en="SVG (Spatially Variable Genes)">SVG (Spatially Variable Genes)</h4>
+<div data-lang="zh"><p>表達量<strong>跟空間位置相關</strong>的基因。HVG 不一定 spatial（如全組織高 noise 的 housekeeping）；SVG 不一定 highly variable（弱訊號但有結構也算）。</p><p>適用：spatial domain identification、SVG 詳細在 <a href="svgs.html">Step 7</a>。</p></div>
+<div data-lang="en"><p>Genes whose expression <strong>depends on location</strong>. HVGs aren't always spatial (e.g. noisy housekeeping); SVGs aren't always highly variable (weak but structured signals count).</p><p>Use: spatial domain ID — covered in <a href="svgs.html">Step 7</a>.</p></div>
+</div>
+</div>
+<div class="callout tip"><span class="callout-icon">💡</span><div>
+<span data-lang="zh"><strong>實務：</strong>初次分析用 2 000 個 HVG 做 PCA 即可；想針對空間結構 cluster 時，再用 SVG 重做一次 PCA 通常會更乾淨。</span>
+<span data-lang="en"><strong>In practice:</strong> start with ~2 000 HVGs for PCA; when you specifically want spatial-structure clustering, re-run PCA on SVGs — it usually looks cleaner.</span>
+</div></div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：BANKSY 鄰域權重如何改變嵌入" data-en="Interactive: how BANKSY's neighborhood weight reshapes the embedding">互動：BANKSY 鄰域權重如何改變嵌入</h2>
+<div data-lang="zh"><p>BANKSY 的核心參數 <code>λ</code>（lambda）控制「我自己的表達 vs 鄰域平均表達」的權重。λ = 0 等價於忽略空間；λ 越大越偏重空間鄰域。觀察右側 cluster 結構如何從「混在一起」變成「空間連續區塊」。</p></div>
+<div data-lang="en"><p>BANKSY's core parameter <code>λ</code> controls "self vs neighborhood-mean" weight. λ = 0 ignores space; larger λ leans on neighborhood context. Watch how clusters morph from "tangled" into "spatially contiguous patches" on the right.</p></div>
+<div class="interactive-panel">
+<div class="slider-group"><label><span data-zh="BANKSY λ 鄰域權重" data-en="BANKSY λ (neighborhood weight)">BANKSY λ</span> <span id="valLam">0.0</span></label><input type="range" id="sliderLam" min="0" max="1" value="0" step="0.05"></div>
+<div class="canvas-container"><canvas id="banksy" width="700" height="320"></canvas></div>
+<p style="font-size:.82rem;color:var(--c-ink-muted);text-align:center;"><span data-zh="顏色：cluster 標籤；底色：兩個生物學區塊" data-en="Color: cluster label; background blocks: two biological regions">顏色：cluster 標籤；底色：兩個生物學區塊</span></p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / Seurat + BANKSY</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / Scanpy + BANKSY</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># 標準路線 / Standard scRNA-style</span>
+vis &lt;- <span class="func">FindVariableFeatures</span>(vis, nfeatures = <span class="num">2000</span>)
+vis &lt;- <span class="func">ScaleData</span>(vis)
+vis &lt;- <span class="func">RunPCA</span>(vis, npcs = <span class="num">30</span>)
+vis &lt;- <span class="func">RunUMAP</span>(vis, dims = <span class="num">1</span>:<span class="num">30</span>)
+<span class="func">DimPlot</span>(vis); <span class="func">SpatialDimPlot</span>(vis)
+
+<span class="comment"># 空間感知：BANKSY (Seurat v5 已內建)</span>
+<span class="func">library</span>(Banksy)
+vis &lt;- <span class="func">RunBanksy</span>(vis, lambda = <span class="num">0.2</span>, dimx = <span class="str">"x"</span>, dimy = <span class="str">"y"</span>, assay = <span class="str">"SCT"</span>)
+vis &lt;- <span class="func">RunPCA</span>(vis, assay = <span class="str">"BANKSY"</span>, npcs = <span class="num">30</span>)
+vis &lt;- <span class="func">FindNeighbors</span>(vis, reduction = <span class="str">"pca"</span>) |&gt; <span class="func">FindClusters</span>(resolution = <span class="num">0.6</span>)</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="comment"># 標準路線 / Standard</span>
+sc.pp.highly_variable_genes(adata, n_top_genes=<span class="num">2000</span>)
+sc.pp.scale(adata, max_value=<span class="num">10</span>)
+sc.tl.pca(adata, n_comps=<span class="num">30</span>)
+sc.pp.neighbors(adata, n_pcs=<span class="num">30</span>); sc.tl.umap(adata)
+
+<span class="comment"># BANKSY (Banksy-py)</span>
+<span class="kw">import</span> banksy_py <span class="kw">as</span> bp
+adata = bp.banksy.compute_banksy_matrix(adata, lambda_=<span class="num">0.2</span>, k_geom=<span class="num">15</span>)
+sc.tl.pca(adata, layer=<span class="str">"banksy"</span>, n_comps=<span class="num">30</span>)
+sc.pp.neighbors(adata, n_pcs=<span class="num">30</span>); sc.tl.leiden(adata, resolution=<span class="num">0.6</span>)</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">1. 為什麼純 PCA + Leiden 在 ST 常常產生「空間不連續」的 cluster？</p>
+<p data-lang="en">1. Why does plain PCA + Leiden often produce "spatially-discontinuous" clusters in ST?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 因為 PCA 不適合 ST</span><span data-lang="en">A. PCA isn't suitable for ST</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 因為它把空間資訊完全忽略，只看 expression</span><span data-lang="en">B. It ignores space entirely, considering only expression</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 因為 ST 沒有空間資訊</span><span data-lang="en">C. Because ST has no spatial info</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 因為 BANKSY 是錯的</span><span data-lang="en">D. Because BANKSY is wrong</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">2. BANKSY 的 λ 參數調得很大會發生什麼？</p>
+<p data-lang="en">2. What happens if BANKSY's λ is set very high?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 完全跟著鄰居走，cluster 變得平滑、可能模糊邊界差異</span><span data-lang="en">A. Embedding follows neighbors heavily, clusters smooth out — boundaries may blur</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 完全等同於 PCA</span><span data-lang="en">B. Becomes equivalent to PCA</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. cluster 數一定變多</span><span data-lang="en">C. Always increases cluster count</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 不影響任何結果</span><span data-lang="en">D. Has no effect</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">3. SVG 跟 HVG 最關鍵的差別？</p>
+<p data-lang="en">3. Key difference between SVG and HVG?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. SVG 只能用 R</span><span data-lang="en">A. SVG only runs in R</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. SVG 考慮空間自相關，HVG 只看整體變異</span><span data-lang="en">B. SVG considers spatial autocorrelation; HVG only looks at overall variance</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. SVG 一定比 HVG 多</span><span data-lang="en">C. SVGs are always more numerous than HVGs</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. SVG 跟 HVG 是同義詞</span><span data-lang="en">D. SVG and HVG are synonyms</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="normalization.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 4: Normalization</span></a>
+<a href="spatial-domains.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 6: Spatial Domains</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+// BANKSY toy: two regions intermixed at boundary, spots assigned to one of two cell types with noise.
+const W=700,H=320,CV=document.getElementById('banksy'),CTX=CV.getContext('2d');
+const spots=[];
+const cols=30,rows=14;
+for(let i=0;i<cols;i++) for(let j=0;j<rows;j++){
+  const x=20+i*((W-40)/cols)+(j%2?12:0), y=20+j*((H-40)/rows);
+  // ground-truth region: a curved boundary
+  const gtRegion = (y < H/2 + 40*Math.sin(x/60)) ? 'A' : 'B';
+  // each spot's expression: A->1, B->0, noise
+  let expr = (gtRegion==='A'?1:0) + (Math.random()-0.5)*0.7;
+  spots.push({x,y,gt:gtRegion,expr});
+}
+function neighborMean(s){
+  let sum=0,cnt=0;
+  spots.forEach(t=>{if(t===s)return;const dx=t.x-s.x,dy=t.y-s.y,d2=dx*dx+dy*dy;if(d2<1100){sum+=t.expr;cnt++;}});
+  return cnt? sum/cnt : s.expr;
+}
+function draw(){
+  const lam = +document.getElementById('sliderLam').value;
+  document.getElementById('valLam').textContent = lam.toFixed(2);
+  CTX.clearRect(0,0,W,H);
+  // ground-truth shading
+  for(let x=0;x<W;x+=10) for(let y=0;y<H;y+=10){
+    const gt = (y < H/2 + 40*Math.sin(x/60));
+    CTX.fillStyle = gt ? 'rgba(216,194,232,0.18)' : 'rgba(232,200,170,0.18)';
+    CTX.fillRect(x,y,10,10);
+  }
+  // banksy embedding: feature = (1-lam)*expr + lam*nbrMean ; cluster by threshold 0.5
+  spots.forEach(s=>{
+    const f = (1-lam)*s.expr + lam*neighborMean(s);
+    const cl = f>0.5 ? 'A' : 'B';
+    CTX.beginPath(); CTX.arc(s.x,s.y,5.5,0,Math.PI*2);
+    CTX.fillStyle = cl==='A'? 'rgba(91,62,150,0.9)' : 'rgba(216,107,42,0.9)';
+    CTX.fill();
+  });
+}
+document.getElementById('sliderLam').oninput=draw;
+draw();
+
+// Quiz
+const QF={
+  zh:{q1_y:'PCA 完全不理空間，所以結果可能空間不連續。',q1_n:'正確答案已標示。',q2_y:'λ 大 → 嵌入向量幾乎全靠鄰居，邊界容易模糊。',q2_n:'正確答案已標示。',q3_y:'SVG 看 spatial autocorrelation；HVG 只看 variance。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'PCA ignores space, so clusters can be spatially non-contiguous.',q1_n:'Correct answer highlighted.',q2_y:'High λ pushes embedding to follow neighbors — boundaries blur.',q2_n:'Correct answer highlighted.',q3_y:'SVG uses spatial autocorrelation; HVG just variance.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
