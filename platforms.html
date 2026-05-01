@@ -1,0 +1,247 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 2: Platforms — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html" class="active">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 2 / 15</div>
+<h1 data-zh="平台比較：選對工具是分析的一半" data-en="Platform Comparison: pick the right tool first">平台比較：選對工具是分析的一半</h1>
+<p class="subtitle" data-lang="zh">7 大主流平台 — 解析度、通量、樣本相容性、典型應用情境一次看完。</p>
+<p class="subtitle" data-lang="en">Seven major platforms — resolution, throughput, sample compatibility, and typical use cases at a glance.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="兩大家族" data-en="TWO FAMILIES">兩大家族</div>
+<h2 data-zh="一、Spot-based / NGS-based" data-en="I. Spot-based / NGS-based">一、Spot-based / NGS-based</h2>
+<div class="card-grid cols-2">
+<div class="card"><h4>🔵 10x Visium <span class="tag">FFPE / FF</span></h4>
+<div data-lang="zh"><p><strong>解析度：</strong>55 µm spot（≈ 1–10 cells）<br><strong>spot 間距：</strong>100 µm<br><strong>覆蓋：</strong>全轉錄組（probe-based for FFPE）<br><strong>面積：</strong>6.5 mm × 6.5 mm（標準）/ 11 mm × 11 mm (CytAssist)<br><strong>定位：</strong>產業界用量最大、社群與工具支援最完整、適合<strong>初學者第一個 ST 實驗</strong>。</p></div>
+<div data-lang="en"><p><strong>Resolution:</strong> 55 µm spot (≈ 1–10 cells)<br><strong>Spot pitch:</strong> 100 µm<br><strong>Coverage:</strong> whole transcriptome (probe-based for FFPE)<br><strong>Area:</strong> 6.5 × 6.5 mm (standard) / 11 × 11 mm (CytAssist)<br><strong>Niche:</strong> the industry default — largest community, most tools, ideal <strong>first ST experiment</strong>.</p></div>
+</div>
+<div class="card"><h4>🔵 Visium HD <span class="tag">FFPE / FF</span> <span class="tag amber">2 µm</span></h4>
+<div data-lang="zh"><p><strong>解析度：</strong>2 µm bin（連續無 gap）<br><strong>常用 bin：</strong>2 / 8 / 16 µm，10x 推薦先用 8 µm 分析<br><strong>覆蓋：</strong>~18 085 基因（probe-based）<br><strong>定位：</strong>2024 上市、近單細胞解析度的 NGS-based ST，FFPE 相容、與 Seurat v5 / BANKSY 整合度高。</p></div>
+<div data-lang="en"><p><strong>Resolution:</strong> 2 µm bins (continuous, no gap)<br><strong>Common bins:</strong> 2 / 8 / 16 µm — 10x recommends starting at 8 µm<br><strong>Coverage:</strong> ~18 085 genes (probe-based)<br><strong>Niche:</strong> launched 2024 — near single-cell NGS-based ST, FFPE-compatible, tight Seurat v5 / BANKSY integration.</p></div>
+</div>
+<div class="card"><h4>🔵 Slide-seq V2 <span class="tag">FF</span></h4>
+<div data-lang="zh"><p><strong>解析度：</strong>10 µm bead<br><strong>覆蓋：</strong>全轉錄組<br><strong>定位：</strong>學術/開源管道，beads packing 成連續面，但靈敏度比 Visium 低，需要更高定序深度。</p></div>
+<div data-lang="en"><p><strong>Resolution:</strong> 10 µm beads<br><strong>Coverage:</strong> whole transcriptome<br><strong>Niche:</strong> academic / open pipeline; densely packed beads but lower sensitivity than Visium — needs deeper sequencing.</p></div>
+</div>
+<div class="card"><h4>🔵 Stereo-seq (BGI) <span class="tag">FF</span> <span class="tag amber">500 nm</span></h4>
+<div data-lang="zh"><p><strong>解析度：</strong>500 nm DNB（可下游 binning 到 25/50/100）<br><strong>面積：</strong>支援 13 cm × 13 cm 超大 chip<br><strong>覆蓋：</strong>全轉錄組<br><strong>定位：</strong>大面積 + 高解析度，特別適合<strong>整顆器官切面</strong>或胚胎全胚層研究。</p></div>
+<div data-lang="en"><p><strong>Resolution:</strong> 500 nm DNB spots (binned downstream to 25/50/100)<br><strong>Area:</strong> up to 13 × 13 cm chips<br><strong>Coverage:</strong> whole transcriptome<br><strong>Niche:</strong> very large area + high resolution — ideal for <strong>whole-organ sections</strong> or whole-embryo studies.</p></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2 data-zh="二、Image-based / FISH-based" data-en="II. Image-based / FISH-based">二、Image-based / FISH-based</h2>
+<div class="card-grid cols-2">
+<div class="card"><h4>🟣 10x Xenium <span class="tag">FFPE / FF</span> <span class="tag amber">subcellular</span></h4>
+<div data-lang="zh"><p><strong>解析度：</strong>真正單細胞 / subcellular<br><strong>Panel：</strong>Multi-Tissue (377)、5K Pan-Tissue (5 001)、自訂 panel<br><strong>掃描範圍：</strong>12 mm × 24 mm<br><strong>定位：</strong>FFPE 相容性極佳、社群快速成長、Xenium Analyzer 內建 segmentation。Panel 越大每基因偵測敏感度越低。</p></div>
+<div data-lang="en"><p><strong>Resolution:</strong> true single-cell / subcellular<br><strong>Panels:</strong> Multi-Tissue (377), 5K Pan-Tissue (5 001), custom<br><strong>Scan area:</strong> 12 × 24 mm<br><strong>Niche:</strong> excellent FFPE handling, fast-growing community, built-in segmentation. Larger panel ⇒ lower per-gene sensitivity.</p></div>
+</div>
+<div class="card"><h4>🟣 Vizgen MERFISH / MERSCOPE <span class="tag">FFPE / FF</span></h4>
+<div data-lang="zh"><p><strong>解析度：</strong>subcellular<br><strong>Panel：</strong>140–1 000 基因<br><strong>掃描範圍：</strong>~1 cm²<br><strong>定位：</strong>在<strong>高品質 RNA</strong> 上敏感度略勝 Xenium，學術廣泛應用，特別在腦圖譜（Allen Brain）上有大型參考資料。</p></div>
+<div data-lang="en"><p><strong>Resolution:</strong> subcellular<br><strong>Panel:</strong> 140–1 000 genes<br><strong>Scan area:</strong> ~1 cm²<br><strong>Niche:</strong> slightly higher sensitivity than Xenium on <strong>high-quality RNA</strong>; widely used in academia, especially the Allen Brain atlases.</p></div>
+</div>
+<div class="card"><h4>🟣 NanoString CosMx SMI <span class="tag">FFPE / FF</span> <span class="tag amber">+ protein</span></h4>
+<div data-lang="zh"><p><strong>解析度：</strong>subcellular<br><strong>Panel：</strong>Whole Transcriptome (~18 000) / 6K / 1K 可選；可同時加 64 種 protein<br><strong>定位：</strong>提供<strong>全轉錄組 image-based</strong> 選項，但每基因敏感度跟細胞通量需取捨；多模態 (RNA + protein) 是賣點。</p></div>
+<div data-lang="en"><p><strong>Resolution:</strong> subcellular<br><strong>Panel:</strong> Whole-transcriptome (~18 k) / 6K / 1K; up to 64 proteins simultaneously<br><strong>Niche:</strong> only <strong>whole-transcriptome image-based</strong> option; trade-offs in per-gene sensitivity & throughput; multi-omic RNA + protein.</p></div>
+</div>
+<div class="card"><h4>🟣 STARmap PLUS <span class="tag">FF</span></h4>
+<div data-lang="zh"><p><strong>解析度：</strong>單細胞<br><strong>Panel：</strong>160–1 020 基因<br><strong>定位：</strong>學術 in-situ sequencing 平台，特別在 3D 厚切片成像有優勢；自架平台、商業化程度低。</p></div>
+<div data-lang="en"><p><strong>Resolution:</strong> single-cell<br><strong>Panel:</strong> 160–1 020 genes<br><strong>Niche:</strong> academic in-situ sequencing — strong on 3D thick-section imaging; in-house build, limited commercialization.</p></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：在 trade-off 空間中找你需要的平台" data-en="Interactive: locate platforms in trade-off space">互動：在 trade-off 空間中找你需要的平台</h2>
+<div data-lang="zh"><p>X 軸 = 解析度 (µm，越小越精細)；Y 軸 = panel/transcriptome 大小（基因數，越大越廣）。圓圈大小 ∝ 掃描面積。</p></div>
+<div data-lang="en"><p>X-axis = resolution (µm, smaller = finer); Y-axis = panel size (genes, larger = broader). Bubble size ∝ scan area.</p></div>
+<div class="interactive-panel">
+<div class="toggle-row">
+<button class="toggle-btn active" id="btnAll">All</button>
+<button class="toggle-btn" id="btnSpot">Spot-based</button>
+<button class="toggle-btn" id="btnImage">Image-based</button>
+</div>
+<div class="chart-container"><canvas id="platChart"></canvas></div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="總比較表" data-en="COMPARISON">總比較表</div>
+<h2 data-zh="三、平台規格速查表" data-en="III. Quick spec sheet">三、平台規格速查表</h2>
+<table class="comp-table">
+<thead><tr><th data-zh="平台" data-en="Platform">平台</th><th data-zh="家族" data-en="Family">家族</th><th data-zh="解析度" data-en="Resolution">解析度</th><th data-zh="基因數" data-en="Genes">基因數</th><th>FFPE</th><th data-zh="典型用途" data-en="Typical use">典型用途</th></tr></thead>
+<tbody>
+<tr><td>Visium</td><td>Spot</td><td>55 µm</td><td>~18 k</td><td>✓</td><td data-lang="zh">入門首選；組織區域層級分析</td><td data-lang="en">Beginner default; tissue-region analysis</td></tr>
+<tr><td>Visium HD</td><td>Spot</td><td>2 / 8 µm</td><td>~18 k</td><td>✓</td><td data-lang="zh">需要近單細胞解析的 NGS 路線</td><td data-lang="en">When near-single-cell + NGS is needed</td></tr>
+<tr><td>Slide-seq V2</td><td>Spot</td><td>10 µm</td><td>~30 k</td><td>✗</td><td data-lang="zh">學術自架管道；需高定序量</td><td data-lang="en">Academic open pipeline; deep sequencing</td></tr>
+<tr><td>Stereo-seq</td><td>Spot</td><td>500 nm</td><td>~30 k</td><td>FF†</td><td data-lang="zh">超大樣本（整器官、整胚胎）</td><td data-lang="en">Very large samples (whole organ / embryo)</td></tr>
+<tr><td>Xenium</td><td>Image</td><td data-lang="zh">subcellular</td><td>377 / 5001</td><td>✓</td><td data-lang="en">subcellular</td><td data-lang="zh">FFPE 單細胞、要可重現的商業化方案</td><td data-lang="en">FFPE single-cell, robust commercial workflow</td></tr>
+<tr><td>MERSCOPE</td><td>Image</td><td data-lang="zh">subcellular</td><td>140–1 000</td><td>✓</td><td data-lang="en">subcellular</td><td data-lang="zh">學術腦圖譜、高品質 RNA</td><td data-lang="en">Brain atlases, high-quality RNA</td></tr>
+<tr><td>CosMx SMI</td><td>Image</td><td data-lang="zh">subcellular</td><td>1 k–18 k</td><td>✓</td><td data-lang="en">subcellular</td><td data-lang="zh">image-based 全轉錄組 / RNA + protein 多模態</td><td data-lang="en">Image-based whole-transcriptome / RNA + protein</td></tr>
+</tbody></table>
+<p style="font-size:.8rem;color:var(--c-ink-muted);margin-top:8px;">† Stereo-seq 對 FFPE 支援已有實驗版，但官方主流仍為 fresh frozen。</p>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="實驗品質" data-en="WET-LAB QC">實驗品質</div>
+<h2 data-zh="四、樣本品質的硬規則 (Wet-lab QC)" data-en="IV. Hard rules for sample quality">四、樣本品質的硬規則</h2>
+<div data-lang="zh">
+<ul>
+<li><strong>新鮮冷凍：</strong>RIN ≥ 7 強烈建議。Visium fresh frozen 對 RNA 品質敏感。</li>
+<li><strong>FFPE：</strong>看 <strong>DV200</strong>（&gt; 200 nt 片段比例）。Visium FFPE 需 DV200 ≥ 30%；Xenium 較寬鬆。</li>
+<li><strong>定序深度：</strong>Visium FFPE 標準 25 k reads/spot 通常不夠，建議 100–120 k reads/spot 才能看到 transcript diversity。</li>
+<li><strong>切片厚度：</strong>Visium 5–10 µm；Xenium 5 µm；MERSCOPE 10 µm；STARmap 可達 100 µm 厚切。</li>
+</ul>
+</div>
+<div data-lang="en">
+<ul>
+<li><strong>Fresh frozen:</strong> RIN ≥ 7 strongly recommended. Visium FF is RNA-quality-sensitive.</li>
+<li><strong>FFPE:</strong> use <strong>DV200</strong> (% fragments &gt; 200 nt). Visium FFPE needs DV200 ≥ 30%; Xenium is more tolerant.</li>
+<li><strong>Sequencing depth:</strong> the default 25 k reads/spot for Visium FFPE is rarely enough — aim for 100–120 k reads/spot to capture transcript diversity.</li>
+<li><strong>Section thickness:</strong> Visium 5–10 µm; Xenium 5 µm; MERSCOPE 10 µm; STARmap up to 100 µm thick sections.</li>
+</ul>
+</div>
+<div class="callout warn"><span class="callout-icon">⚠️</span><div>
+<span data-lang="zh"><strong>常見災難：</strong>樣本通過了基本 QC 但沒人檢查切片是否完整覆蓋 capture area；結果一半的 spot 落在組織外、另一半落在 H&E 染色不均勻區。<strong>切片→染色→上機前的每一步都拍照存檔。</strong></span>
+<span data-lang="en"><strong>Classic disaster:</strong> sample passed basic QC, but nobody checked whether the section fully covers the capture area; half the spots fall outside tissue, the other half on uneven H&E staining. <strong>Photograph every wet-lab step.</strong></span>
+</div></div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="不同平台的讀檔範例" data-en="Loading data per platform">不同平台的讀檔範例</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r2')">R / Seurat</button><button class="code-tab-btn" onclick="switchTab(this,'py2')">Python / Scanpy + Squidpy</button></div>
+<div class="code-tab-content active" id="r2"><pre><span class="comment"># Visium (含 H&E low-res)</span>
+vis &lt;- <span class="func">Load10X_Spatial</span>(<span class="str">"visium_out/"</span>)
+
+<span class="comment"># Visium HD（同時載入多 bin）</span>
+hd  &lt;- <span class="func">Load10X_Spatial</span>(<span class="str">"hd_out/binned_outputs/"</span>, bin.size = <span class="func">c</span>(<span class="num">8</span>, <span class="num">16</span>))
+
+<span class="comment"># Xenium（per-cell + per-transcript）</span>
+xen &lt;- <span class="func">LoadXenium</span>(<span class="str">"xenium_out/"</span>, fov = <span class="str">"fov"</span>)
+
+<span class="comment"># MERSCOPE</span>
+mer &lt;- <span class="func">ReadVizgen</span>(<span class="str">"merfish_out/"</span>) </pre></div>
+<div class="code-tab-content" id="py2"><pre><span class="kw">import</span> scanpy <span class="kw">as</span> sc
+<span class="kw">import</span> squidpy <span class="kw">as</span> sq
+<span class="kw">import</span> spatialdata_io <span class="kw">as</span> sd_io
+
+<span class="comment"># Visium</span>
+adata = sc.read_visium(<span class="str">"visium_out/"</span>)
+
+<span class="comment"># Visium HD</span>
+sdata_hd = sd_io.visium_hd(<span class="str">"hd_out/"</span>)
+
+<span class="comment"># Xenium / MERSCOPE / CosMx — 統一用 SpatialData</span>
+sdata_xe  = sd_io.xenium(<span class="str">"xenium_out/"</span>)
+sdata_mer = sd_io.merscope(<span class="str">"merscope_out/"</span>)
+sdata_cos = sd_io.cosmx(<span class="str">"cosmx_out/"</span>)</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">1. 你想做整個小鼠胚胎切片、看不同器官如何分化，最合適的平台？</p>
+<p data-lang="en">1. You want to profile a whole mouse embryo section to study organ differentiation. Best platform?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. Visium 6.5×6.5 mm</span><span data-lang="en">A. Visium 6.5×6.5 mm</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. Xenium 12×24 mm</span><span data-lang="en">B. Xenium 12×24 mm</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. Stereo-seq（13×13 cm）</span><span data-lang="en">C. Stereo-seq (13×13 cm)</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. STARmap 1 mm²</span><span data-lang="en">D. STARmap 1 mm²</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">2. 你已經知道要看的 60 個免疫標記基因，且樣本是 FFPE。最合適？</p>
+<p data-lang="en">2. You have a defined 60-gene immune panel and FFPE tissue. Best fit?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. Visium FFPE</span><span data-lang="en">A. Visium FFPE</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. Xenium 自訂 panel</span><span data-lang="en">B. Xenium custom panel</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. Slide-seq V2</span><span data-lang="en">C. Slide-seq V2</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. Stereo-seq</span><span data-lang="en">D. Stereo-seq</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">3. 關於 FFPE 樣本的品質指標，下列敘述何者正確？</p>
+<p data-lang="en">3. Which is correct about FFPE sample QC?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 應檢查 DV200，建議 ≥ 30%</span><span data-lang="en">A. Check DV200, target ≥ 30%</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. RIN 是 FFPE 唯一指標</span><span data-lang="en">B. RIN is the only FFPE metric</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. FFPE 不適合做 ST</span><span data-lang="en">C. FFPE is not compatible with ST</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. FFPE 切片可以厚到 100 µm 也沒問題</span><span data-lang="en">D. FFPE sections can be 100 µm thick</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="overview.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 1: Overview</span></a>
+<a href="qc.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 3: Quality Control</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+// Platform trade-off chart
+const platforms = [
+  {name:'Visium', fam:'spot', x:55, y:18000, area:42, color:'rgba(91,62,150,0.7)'},
+  {name:'Visium HD', fam:'spot', x:8, y:18000, area:42, color:'rgba(91,62,150,0.9)'},
+  {name:'Slide-seq V2', fam:'spot', x:10, y:30000, area:9, color:'rgba(120,90,170,0.7)'},
+  {name:'Stereo-seq', fam:'spot', x:0.5, y:30000, area:169, color:'rgba(60,40,110,0.8)'},
+  {name:'Xenium', fam:'image', x:0.3, y:5001, area:288, color:'rgba(216,107,42,0.8)'},
+  {name:'MERSCOPE', fam:'image', x:0.3, y:1000, area:100, color:'rgba(232,160,73,0.8)'},
+  {name:'CosMx SMI', fam:'image', x:0.3, y:18000, area:120, color:'rgba(193,80,30,0.8)'},
+  {name:'STARmap', fam:'image', x:0.3, y:1020, area:5, color:'rgba(180,120,80,0.7)'}
+];
+const chart = new Chart(document.getElementById('platChart'), {
+  type:'bubble',
+  data:{datasets:[{label:'Spot-based', data:[], backgroundColor:'rgba(91,62,150,0.7)'},{label:'Image-based', data:[], backgroundColor:'rgba(232,160,73,0.85)'}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'top'},
+      tooltip:{callbacks:{label:(ctx)=>{const p=ctx.raw; return `${p.name}: res ${p.x}µm, ~${p.y} genes`;}}}
+    },
+    scales:{
+      x:{type:'logarithmic',title:{display:true,text:'Resolution (µm, log)'},min:0.1,max:200},
+      y:{type:'logarithmic',title:{display:true,text:'Panel size (genes, log)'},min:100,max:50000}
+    }
+  }
+});
+function applyFilter(mode){
+  const spot=[],img=[];
+  platforms.forEach(p=>{
+    if(mode==='spot' && p.fam!=='spot') return;
+    if(mode==='image' && p.fam!=='image') return;
+    const pt={x:p.x,y:p.y,r:Math.sqrt(p.area)*1.4,name:p.name};
+    (p.fam==='spot'?spot:img).push(pt);
+  });
+  chart.data.datasets[0].data=spot;
+  chart.data.datasets[1].data=img;
+  chart.update('none');
+}
+document.getElementById('btnAll').onclick=()=>{setActive('btnAll');applyFilter('all');};
+document.getElementById('btnSpot').onclick=()=>{setActive('btnSpot');applyFilter('spot');};
+document.getElementById('btnImage').onclick=()=>{setActive('btnImage');applyFilter('image');};
+function setActive(id){['btnAll','btnSpot','btnImage'].forEach(b=>document.getElementById(b).classList.toggle('active',b===id));}
+applyFilter('all');
+
+// Quiz
+const QF={
+  zh:{q1_y:'Stereo-seq 大面積 chip 是整器官/整胚胎首選。',q1_n:'正確答案已標示。',q2_y:'已知 panel + FFPE，Image-based 自訂 panel 最有效率。',q2_n:'正確答案已標示。',q3_y:'FFPE 看 DV200，目標 ≥ 30%。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'Stereo-seq\'s very large chip is ideal for whole-organ / whole-embryo work.',q1_n:'Correct answer highlighted.',q2_y:'Defined panel + FFPE → image-based custom panel is most efficient.',q2_n:'Correct answer highlighted.',q3_y:'For FFPE check DV200 (target ≥ 30%).',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>

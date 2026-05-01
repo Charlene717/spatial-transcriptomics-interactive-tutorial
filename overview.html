@@ -1,0 +1,266 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 1: Overview — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html" class="active">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 1 / 15</div>
+<h1 data-zh="總覽：什麼是 Spatial Transcriptomics" data-en="Overview: What is Spatial Transcriptomics">總覽：什麼是 Spatial Transcriptomics</h1>
+<p class="subtitle" data-lang="zh">把基因表達放回它原本的「位置」——讓你不只看到「誰在表達什麼」，更看到「在哪裡、跟誰相鄰、形成什麼結構」。</p>
+<p class="subtitle" data-lang="en">Put gene expression back into its tissue context — see not only "who expresses what," but also "where, near whom, and forming what structure."</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="概覽" data-en="OVERVIEW">概覽</div>
+<h2 data-zh="從 scRNA-seq 出發，為什麼還需要 ST？" data-en="Coming from scRNA-seq — why do we need ST?">從 scRNA-seq 出發，為什麼還需要 ST？</h2>
+<div data-lang="zh">
+<p>單細胞轉錄組學 (scRNA-seq) 解決了「不同細胞表達不同基因」的問題，但在解離 (dissociation) 過程中，<strong>細胞的空間關係徹底遺失</strong>。然而生物學的核心常常正是<strong>空間</strong>：腫瘤微環境怎麼分區？發育時細胞如何沿軸排列？神經元如何按腦區分層？這些問題 scRNA-seq 沒辦法回答。</p>
+<p><strong>Spatial Transcriptomics (ST)</strong> 一邊保留組織切片的二維/三維座標，一邊量化 RNA。換句話說，每個 RNA 分子都帶著一組 (x, y) 甚至 (x, y, z) 標籤回到分析中。這讓我們可以：</p>
+<ul>
+<li>觀察基因表達跟解剖學結構（如皮層、髓質、毛細血管）的對應</li>
+<li>回答「哪兩種細胞物理上相鄰時會啟動哪條訊號路徑」</li>
+<li>在保留組織切片的前提下做 H&E / IF 影像 + 表達雙模態整合</li>
+<li>研究稀有/邊界細胞（如腫瘤侵襲前緣、傷口邊界）</li>
+</ul>
+</div>
+<div data-lang="en">
+<p>Single-cell RNA-seq (scRNA-seq) solved "different cells express different genes," but tissue dissociation <strong>completely destroys spatial context</strong>. Yet much of biology is fundamentally spatial: how is the tumor microenvironment zoned? How do cells line up along developmental axes? How do neurons stratify across cortical layers? These questions are out of reach for scRNA-seq.</p>
+<p><strong>Spatial Transcriptomics (ST)</strong> preserves the 2D / 3D coordinates of a tissue section while quantifying RNA. Every transcript carries an (x, y) — sometimes (x, y, z) — tag into the analysis. This lets us:</p>
+<ul>
+<li>Map gene expression onto anatomy (cortex, medulla, capillaries)</li>
+<li>Ask "which signaling pathway fires when these two cell types are physically adjacent"</li>
+<li>Combine H&E / IF imaging with expression as paired modalities on the same section</li>
+<li>Study rare or boundary cells (tumor invasion fronts, wound margins)</li>
+</ul>
+</div>
+<div class="callout tip"><span class="callout-icon">💡</span><div>
+<span data-lang="zh"><strong>核心觀念：</strong>ST 不是「比 scRNA-seq 更好的版本」，而是<strong>互補</strong>。實務上常常先用 scRNA-seq 拿到細胞類型 reference，再用 ST 把這些 reference 映射回組織。</span>
+<span data-lang="en"><strong>Core idea:</strong> ST is not "a better scRNA-seq" — they are <strong>complementary</strong>. The standard workflow uses scRNA-seq to build a cell-type reference, then maps it back into tissue with ST.</span>
+</div></div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="技術光譜" data-en="TECHNOLOGY SPECTRUM">技術光譜</div>
+<h2 data-zh="兩大技術路線：Spot-based vs Image-based" data-en="Two big technology families: Spot-based vs Image-based">兩大技術路線：Spot-based vs Image-based</h2>
+<div class="card-grid cols-2">
+<div class="card"><div class="card-icon">🔵</div><h4 data-zh="Spot-based (NGS-based)" data-en="Spot-based (NGS-based)">Spot-based / NGS-based</h4>
+<div data-lang="zh">
+<p>把組織貼在帶有空間條碼 (spatial barcode) 的捕捉陣列上，cDNA 合成完直接走 NGS。</p>
+<p><strong>代表：</strong>10x Visium、Visium HD、Slide-seq V2、Stereo-seq、GeoMx DSP。</p>
+<p><strong>優點：</strong>全轉錄組覆蓋（沒有 panel 限制）、適合做<strong>假說產生</strong>、和現有 scRNA-seq 工具相容。</p>
+<p><strong>缺點：</strong>多數情況一個 spot 包含多個細胞 (Visium 55 µm 約 1–10 個細胞)，需要做 deconvolution。</p>
+</div>
+<div data-lang="en">
+<p>Tissue is placed on a capture array with positional barcodes; cDNA is then sequenced by NGS.</p>
+<p><strong>Examples:</strong> 10x Visium, Visium HD, Slide-seq V2, Stereo-seq, GeoMx DSP.</p>
+<p><strong>Pros:</strong> whole-transcriptome (no panel limit), great for <strong>hypothesis generation</strong>, compatible with the scRNA-seq toolchain.</p>
+<p><strong>Cons:</strong> each spot usually covers multiple cells (Visium 55 µm spot ≈ 1–10 cells), so deconvolution is required.</p>
+</div>
+</div>
+<div class="card"><div class="card-icon">🟣</div><h4 data-zh="Image-based (FISH/ISS-based)" data-en="Image-based (FISH/ISS-based)">Image-based / FISH-based</h4>
+<div data-lang="zh">
+<p>用螢光探針或 in-situ sequencing 反覆顯微成像每個 RNA 分子，達到<strong>單細胞甚至 subcellular 解析度</strong>。</p>
+<p><strong>代表：</strong>10x Xenium、Vizgen MERFISH/MERSCOPE、NanoString CosMx SMI、STARmap。</p>
+<p><strong>優點：</strong>真正的單細胞解析度、保留 RNA 的 (x, y, z) 位置、適合<strong>假說驗證</strong>。</p>
+<p><strong>缺點：</strong>必須選定 panel（100–6000 基因），無法量到 panel 外的基因；分析瓶頸在<strong>細胞切割</strong>。</p>
+</div>
+<div data-lang="en">
+<p>Fluorescent probes or in-situ sequencing image each RNA molecule cyclically — reaching <strong>single-cell or even subcellular resolution</strong>.</p>
+<p><strong>Examples:</strong> 10x Xenium, Vizgen MERFISH/MERSCOPE, NanoString CosMx SMI, STARmap.</p>
+<p><strong>Pros:</strong> true single-cell resolution, preserves (x, y, z) of every RNA, ideal for <strong>hypothesis testing</strong>.</p>
+<p><strong>Cons:</strong> requires a fixed panel (100–6 000 genes); off-panel genes are invisible. Bottleneck shifts to <strong>cell segmentation</strong>.</p>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：spot 解析度 vs 細胞密度" data-en="Interactive: spot resolution vs cell density">互動：spot 解析度 vs 細胞密度</h2>
+<div data-lang="zh"><p>拖動下方滑桿，觀察 spot 直徑如何決定一個 spot 內捕獲到的細胞數。藍色圓點代表細胞、淺紫色圓圈代表 spot 涵蓋範圍。</p></div>
+<div data-lang="en"><p>Move the sliders to see how spot diameter controls the number of cells captured per spot. Blue dots are cells; lavender circles are spot footprints.</p></div>
+<div class="interactive-panel">
+<div class="sim-stats"><span class="sim-stat pass" id="statSpot">—</span><span class="sim-stat info" id="statCells">—</span><span class="sim-stat info" id="statAvg">—</span></div>
+<div class="slider-group"><label><span data-zh="Spot 直徑 (µm)" data-en="Spot diameter (µm)">Spot 直徑 (µm)</span> <span id="valDia">55</span></label><input type="range" id="sliderDia" min="2" max="100" value="55" step="1"></div>
+<div class="slider-group"><label><span data-zh="細胞密度 (cells / mm²)" data-en="Cell density (cells / mm²)">細胞密度</span> <span id="valDens">3500</span></label><input type="range" id="sliderDens" min="500" max="8000" value="3500" step="100"></div>
+<div class="canvas-container"><canvas id="resCanvas" width="700" height="320"></canvas></div>
+<p style="font-size:.82rem;color:var(--c-ink-muted);text-align:center;"><span data-zh="畫面範圍：500 µm × 230 µm" data-en="Field of view: 500 µm × 230 µm">畫面範圍：500 µm × 230 µm</span></p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="分析骨幹" data-en="ANALYSIS BACKBONE">分析骨幹</div>
+<h2 data-zh="ST 分析的標準骨幹（與 scRNA-seq 對照）" data-en="The standard ST pipeline (vs scRNA-seq)">ST 分析的標準骨幹（與 scRNA-seq 對照）</h2>
+<table class="comp-table">
+<thead><tr><th data-zh="步驟" data-en="Step">步驟</th><th>scRNA-seq</th><th>Spatial Transcriptomics</th></tr></thead>
+<tbody>
+<tr><td data-zh="QC"><strong>QC</strong></td><td data-lang="zh">細胞層級：nFeature、nCount、MT%</td><td data-lang="zh">spot 層級 + 加入<strong>空間鄰近 outlier (SpotSweeper)</strong> 與組織覆蓋檢查</td><td data-lang="en">Cell-level: nFeature, nCount, MT%</td><td data-lang="en">Spot-level + <strong>spatially-aware outlier (SpotSweeper)</strong> + tissue coverage check</td></tr>
+<tr><td><strong>Norm.</strong></td><td>LogNormalize / SCTransform</td><td data-lang="zh">同上，但要注意 spot 含多細胞時 SCTransform 假設可能失準</td><td data-lang="en">Same, but SCTransform assumptions may break when spots contain mixed cells</td></tr>
+<tr><td data-zh="特徵"><strong>HVG / Features</strong></td><td>Variance / dispersion</td><td data-lang="zh"><strong>SVG (空間變異基因)</strong>：Moran's I、SPARK-X、nnSVG</td><td data-lang="en"><strong>SVG (Spatially Variable Genes)</strong>: Moran's I, SPARK-X, nnSVG</td></tr>
+<tr><td data-zh="分群"><strong>Clustering</strong></td><td>Louvain / Leiden in PCA</td><td data-lang="zh"><strong>空間區域 (Spatial domain)</strong>：BayesSpace, SpaGCN, GraphST, BANKSY</td><td data-lang="en"><strong>Spatial domains</strong>: BayesSpace, SpaGCN, GraphST, BANKSY</td></tr>
+<tr><td data-zh="細胞類型"><strong>Cell typing</strong></td><td data-lang="zh">Marker / SingleR / Azimuth</td><td data-lang="zh">Spot-based: <strong>Deconvolution</strong> (cell2location, RCTD…)；Image-based: 直接 segmentation + 分群</td><td data-lang="en">Marker / SingleR / Azimuth</td><td data-lang="en">Spot-based: <strong>deconvolution</strong> (cell2location, RCTD…); Image-based: segmentation + clustering</td></tr>
+<tr><td data-zh="通訊"><strong>Cell communication</strong></td><td>CellChat / CellPhoneDB</td><td><strong>CellChat v2 (spatial) / COMMOT</strong></td></tr>
+<tr><td data-zh="進階"><strong>Special</strong></td><td data-lang="zh">Trajectory, Integration</td><td data-lang="zh"><strong>Niche / Microenvironment</strong>、<strong>3D 重建</strong>、<strong>histology integration</strong></td><td data-lang="en">Trajectory, Integration</td><td data-lang="en"><strong>Niche / microenvironment</strong>, <strong>3D reconstruction</strong>, <strong>histology integration</strong></td></tr>
+</tbody></table>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="決策引導" data-en="DECISION GUIDE">決策引導</div>
+<h2 data-zh="什麼時候該選 ST？怎麼選平台？" data-en="When to use ST and how to pick a platform?">什麼時候該選 ST？怎麼選平台？</h2>
+<div class="decision-tree">
+<h4>🌳 <span data-zh="ST 平台選擇 (摘錄 BMC Genomics 2025 實務指南)" data-en="ST platform decision tree (after BMC Genomics 2025 practical guide)">ST 平台選擇</span></h4>
+<div data-lang="zh">
+<div class="dt-node"><span class="dt-q">Q1:</span><div>研究目標是<strong>產生新假設</strong>還是<strong>驗證既有假設</strong>？ <span class="dt-arrow">→ 產生 →</span> NGS-based (Visium / Stereo-seq)；<span class="dt-arrow">→ 驗證 →</span> Image-based (Xenium / MERFISH)。</div></div>
+<div class="dt-node"><span class="dt-q">Q2:</span><div>樣本是 <strong>FFPE</strong> 還是新鮮冷凍？ <span class="dt-arrow">→ FFPE →</span> Visium FFPE / Visium HD / Xenium 都支援；MERSCOPE 在高品質 RNA 上略勝。</div></div>
+<div class="dt-node"><span class="dt-q">Q3:</span><div>需要<strong>單細胞解析度</strong>？ <span class="dt-arrow">→ 是 →</span> Image-based 或 Visium HD 8 µm bin。</div></div>
+<div class="dt-node"><span class="dt-q">Q4:</span><div>研究的基因<strong>已經知道很清楚</strong>？ <span class="dt-arrow">→ 是 →</span> Image-based panel；<span class="dt-arrow">→ 否 →</span> Visium / Visium HD 全轉錄組。</div></div>
+</div>
+<div data-lang="en">
+<div class="dt-node"><span class="dt-q">Q1:</span><div>Goal: <strong>generate</strong> or <strong>test</strong> hypotheses? <span class="dt-arrow">→ Generate →</span> NGS-based (Visium / Stereo-seq); <span class="dt-arrow">→ Test →</span> Image-based (Xenium / MERFISH).</div></div>
+<div class="dt-node"><span class="dt-q">Q2:</span><div><strong>FFPE</strong> or fresh frozen? <span class="dt-arrow">→ FFPE →</span> Visium FFPE / Visium HD / Xenium all work; MERSCOPE outperforms on very high-quality RNA.</div></div>
+<div class="dt-node"><span class="dt-q">Q3:</span><div>Need <strong>single-cell resolution</strong>? <span class="dt-arrow">→ Yes →</span> Image-based or Visium HD 8 µm bins.</div></div>
+<div class="dt-node"><span class="dt-q">Q4:</span><div>Genes of interest <strong>already well defined</strong>? <span class="dt-arrow">→ Yes →</span> Image-based panel; <span class="dt-arrow">→ No →</span> Visium / Visium HD whole-transcriptome.</div></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="第一個 ST 物件" data-en="Your first ST object">第一個 ST 物件</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / Seurat</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / Scanpy + Squidpy</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># 讀入 10x Visium 標準輸出 / Load standard 10x Visium output</span>
+<span class="func">library</span>(Seurat)
+vis &lt;- <span class="func">Load10X_Spatial</span>(data.dir = <span class="str">"sample_visium/"</span>)
+
+<span class="comment"># vis 同時包含 RNA 表達矩陣 + spatial coordinates + low-res tissue image</span>
+<span class="func">SpatialFeaturePlot</span>(vis, features = <span class="str">"nCount_Spatial"</span>)
+<span class="func">SpatialFeaturePlot</span>(vis, features = <span class="str">"MS4A1"</span>)  <span class="comment"># B-cell marker 直接畫回組織</span></pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="kw">import</span> scanpy <span class="kw">as</span> sc
+<span class="kw">import</span> squidpy <span class="kw">as</span> sq
+
+<span class="comment"># 讀入 10x Visium / Load Visium</span>
+adata = sc.read_visium(<span class="str">"sample_visium/"</span>)
+adata.var_names_make_unique()
+
+<span class="comment"># 直接把 nCount 和某基因畫回組織</span>
+sq.pl.spatial_scatter(adata, color=[<span class="str">"total_counts"</span>, <span class="str">"MS4A1"</span>])</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">1. 對於想要回答「腫瘤侵襲前緣的免疫細胞跟腫瘤細胞如何互動」這個問題，下列哪個技術最適合？</p>
+<p data-lang="en">1. To answer "how do immune cells interact with tumor cells at the invasion front," which technology fits best?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. Bulk RNA-seq</span><span data-lang="en">A. Bulk RNA-seq</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 解離後的 scRNA-seq</span><span data-lang="en">B. Dissociated scRNA-seq</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. Spatial Transcriptomics</span><span data-lang="en">C. Spatial Transcriptomics</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. qPCR</span><span data-lang="en">D. qPCR</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">2. 關於 Spot-based 與 Image-based 的差異，下列敘述何者正確？</p>
+<p data-lang="en">2. Which statement comparing spot-based vs image-based ST is correct?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. Spot-based 通常涵蓋全轉錄組但解析度較低；Image-based 是單細胞解析度但侷限於 panel</span><span data-lang="en">A. Spot-based is whole-transcriptome but lower resolution; image-based is single-cell but panel-limited</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 兩者都是單細胞解析度，差別只在通量</span><span data-lang="en">B. Both are single-cell resolution; only throughput differs</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. Image-based 可以量到任意基因</span><span data-lang="en">C. Image-based can measure any gene of interest</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. Spot-based 不需要 cell-type deconvolution</span><span data-lang="en">D. Spot-based does not need cell-type deconvolution</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">3. 在 ST 流程中，以下哪一個步驟是相對於 scRNA-seq 「新增」出來、特別重要的？</p>
+<p data-lang="en">3. Which step is genuinely new and especially important in ST compared to scRNA-seq?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. PCA</span><span data-lang="en">A. PCA</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. Spatial domain identification + Spatially Variable Genes</span><span data-lang="en">B. Spatial domain identification + Spatially Variable Genes</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. UMAP</span><span data-lang="en">C. UMAP</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 過濾低品質細胞</span><span data-lang="en">D. Filtering low-quality cells</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="index.html"><span class="nav-dir" data-zh="← 首頁" data-en="← Home">← 首頁</span><span class="nav-title" data-zh="所有章節" data-en="All chapters">所有章節</span></a>
+<a href="platforms.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 2: Platforms</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+// Resolution sim — random cell positions in fixed FOV; sweep spots in grid
+function rng(seed){return function(){seed=(seed*9301+49297)%233280;return seed/233280;};}
+const r = rng(42);
+const FOV_W = 500, FOV_H = 230; // µm
+let cells = [];
+function regenCells(densityPerMm2){
+  const area_mm2 = (FOV_W*FOV_H)/1e6;
+  const N = Math.round(area_mm2 * densityPerMm2);
+  cells = [];
+  for(let i=0;i<N;i++) cells.push({x: Math.random()*FOV_W, y: Math.random()*FOV_H});
+}
+const cv = document.getElementById('resCanvas');
+const ctx = cv.getContext('2d');
+function draw(){
+  const dia = +document.getElementById('sliderDia').value;
+  const dens = +document.getElementById('sliderDens').value;
+  document.getElementById('valDia').textContent = dia;
+  document.getElementById('valDens').textContent = dens;
+  regenCells(dens);
+  // scale µm -> px
+  const sx = cv.width / FOV_W;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  // draw spots in grid (center-to-center = dia*1.1)
+  const stride = dia * 1.05;
+  const spots = [];
+  for(let cx=dia/2; cx<FOV_W; cx+=stride){
+    for(let cy=dia/2; cy<FOV_H; cy+=stride){
+      spots.push({x:cx,y:cy,r:dia/2,n:0});
+    }
+  }
+  // count cells per spot
+  cells.forEach(c=>{
+    spots.forEach(s=>{
+      const dx = c.x-s.x, dy = c.y-s.y;
+      if(dx*dx+dy*dy <= s.r*s.r) s.n += 1;
+    });
+  });
+  // draw spots
+  spots.forEach(s=>{
+    ctx.beginPath(); ctx.arc(s.x*sx, s.y*sx, s.r*sx, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(91,62,150,0.18)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(91,62,150,0.7)'; ctx.lineWidth = 1; ctx.stroke();
+  });
+  // draw cells
+  cells.forEach(c=>{
+    ctx.beginPath(); ctx.arc(c.x*sx, c.y*sx, 2.2, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(58,151,201,0.85)'; ctx.fill();
+  });
+  const totalSpot = spots.length;
+  const totalCells = cells.length;
+  const avg = totalSpot? (spots.reduce((a,s)=>a+s.n,0)/totalSpot).toFixed(2) : '0';
+  const L = I18n.get();
+  document.getElementById('statSpot').textContent = (L==='zh'?'Spot 數':'# spots') + ': ' + totalSpot;
+  document.getElementById('statCells').textContent = (L==='zh'?'細胞數':'# cells') + ': ' + totalCells;
+  document.getElementById('statAvg').textContent = (L==='zh'?'平均 cells/spot':'avg cells/spot') + ': ' + avg;
+}
+['sliderDia','sliderDens'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+document.addEventListener('langchange',draw);
+draw();
+
+// Quiz
+const QF={
+  zh:{q1_y:'ST 同時保留表達與位置，最適合研究空間鄰接互動。',q1_n:'正確答案已標示。',q2_y:'這正是兩家技術的核心 trade-off。',q2_n:'正確答案已標示。',q3_y:'空間 domain 與 SVG 是 ST 流程才有的、相對於 scRNA-seq 的全新主題。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'ST keeps both expression and coordinates, ideal for spatially-adjacent interactions.',q1_n:'Correct answer highlighted.',q2_y:'That is precisely the core trade-off between the two families.',q2_n:'Correct answer highlighted.',q3_y:'Spatial domains and SVGs are genuinely new ST-specific topics.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
