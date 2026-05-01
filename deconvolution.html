@@ -1,0 +1,259 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 8: Deconvolution — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html" class="active">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 8 / 15</div>
+<h1 data-zh="細胞類型解卷積：把 spot 拆回細胞" data-en="Cell Type Deconvolution: unmixing spots back into cells">細胞類型解卷積：把 spot 拆回細胞</h1>
+<p class="subtitle" data-lang="zh">每個 Visium spot 約 1–10 個細胞，混在一起的表達需要藉助 scRNA reference 拆解。</p>
+<p class="subtitle" data-lang="en">Each Visium spot mixes 1–10 cells; an scRNA reference is required to unmix them.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="問題" data-en="PROBLEM">問題</div>
+<h2 data-zh="一、為什麼需要 deconvolution？" data-en="I. Why deconvolution?">一、為什麼需要 deconvolution？</h2>
+<div data-lang="zh">
+<p>在 spot-based 平台，一個 spot 的表達向量是其涵蓋細胞的表達<strong>線性混合</strong>。如果直接用 spot 表達分群，會看到「不純」的 cluster——例如腫瘤邊界區同時混了腫瘤細胞 + 巨噬細胞 + 內皮細胞。</p>
+<p><strong>Deconvolution</strong> 的目標：在已知 scRNA cell-type signature 的前提下，估算每個 spot 上各細胞類型的比例 (proportion / abundance)。輸出通常是一個 <strong>spot × cell-type</strong> 的矩陣。</p>
+</div>
+<div data-lang="en">
+<p>On spot-based platforms, a spot's expression is a <strong>linear mixture</strong> of its underlying cells. Clustering spot expression directly produces "impure" clusters — e.g. a tumor margin mixes tumor + macrophage + endothelial cells.</p>
+<p><strong>Deconvolution</strong> aims, given an scRNA cell-type signature, to estimate the proportion (or abundance) of each cell type per spot. Output: a <strong>spot × cell-type</strong> matrix.</p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="主流方法" data-en="METHODS">主流方法</h2>
+<h2 data-zh="二、五大主流方法 (2023 Nat Comm benchmark)" data-en="II. Five mainstream methods (2023 Nat Comm benchmark)">二、五大主流方法</h2>
+<table class="comp-table">
+<thead><tr><th data-zh="方法" data-en="Method">方法</th><th data-zh="原理類別" data-en="Family">原理</th><th data-zh="平台適性" data-en="Best for">平台適性</th><th data-zh="GPU" data-en="GPU">GPU</th></tr></thead>
+<tbody>
+<tr><td><strong>cell2location</strong></td><td data-lang="zh">Bayesian probabilistic</td><td data-lang="zh">Visium / Slide-seq / Stereo-seq <strong>多項 benchmark 第一</strong></td><td>✓</td><td data-lang="en">Bayesian probabilistic</td><td data-lang="en">Often #1 across Visium / Slide-seq / Stereo-seq benchmarks</td></tr>
+<tr><td><strong>RCTD</strong></td><td data-lang="zh">Probabilistic likelihood (NB)</td><td data-lang="zh">Visium / Slide-seq；<strong>速度快、有 CPU 平行</strong></td><td>✗</td><td data-lang="en">Probabilistic NB likelihood</td><td data-lang="en">Visium / Slide-seq; <strong>fast, CPU-parallel</strong></td></tr>
+<tr><td><strong>CARD</strong></td><td data-lang="zh">Conditional autoregressive 加入空間平滑</td><td data-lang="zh">Visium 上整體第一名 (2023 Nat Comm)</td><td>✗</td><td data-lang="en">Conditional autoregressive + spatial smoothing</td><td data-lang="en">#1 on Visium in 2023 Nat Comm benchmark</td></tr>
+<tr><td><strong>SPOTlight</strong></td><td data-lang="zh">Seeded NMF</td><td data-lang="zh">Visium 表現好、易解釋</td><td>✗</td><td data-lang="en">Seeded NMF</td><td data-lang="en">Strong on Visium, easy to interpret</td></tr>
+<tr><td><strong>Tangram</strong></td><td data-lang="zh">Deep learning, 把 sc 細胞「映射」到 spot</td><td data-lang="zh">適合 image-based 資料；可同時做映射 + imputation</td><td>✓</td><td data-lang="en">Deep learning, maps sc cells to spots</td><td data-lang="en">Good for image-based data; jointly maps + imputes</td></tr>
+</tbody></table>
+<div class="callout tip"><span class="callout-icon">💡</span><div>
+<span data-lang="zh"><strong>建議起點：</strong>RCTD（CPU 即可、快、表現穩定）；GPU 充足時上 cell2location（更精細的 hierarchical 模型）。Slide-seqV2 / Stereo-seq → cell2location 或 STdeconvolve。</span>
+<span data-lang="en"><strong>Suggested starting point:</strong> RCTD (CPU-only, fast, robust); upgrade to cell2location with a GPU for richer hierarchical modeling. For Slide-seqV2 / Stereo-seq → cell2location or STdeconvolve.</span>
+</div></div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：raw spot 拆成細胞類型比例" data-en="Interactive: spot expression → cell-type proportions">互動：raw spot 拆成細胞類型比例</h2>
+<div data-lang="zh"><p>左側為「混合 spot 表達」，右側為 deconvolution 後的細胞類型比例（pie）。拖動滑桿改變 marker 雜訊，觀察方法在低品質 reference 下的穩定度。</p></div>
+<div data-lang="en"><p>Left: mixed spot expression. Right: deconvolved cell-type pie. Move the slider to add marker noise and watch how performance degrades when the reference is low quality.</p></div>
+<div class="interactive-panel">
+<div class="slider-group"><label><span data-zh="reference 雜訊強度" data-en="Reference noise level">reference 雜訊</span> <span id="valNoise">0.1</span></label><input type="range" id="sliderNoise" min="0" max="0.7" value="0.1" step="0.02"></div>
+<div class="slider-group"><label><span data-zh="spot 真實組成 — Tumor:Immune:Stroma" data-en="True spot composition — Tumor:Immune:Stroma">真實組成</span> <span id="valComp">50:30:20</span></label><input type="range" id="sliderComp" min="0" max="100" value="50" step="5"></div>
+<div class="canvas-container" style="display:flex;gap:20px;justify-content:space-around;align-items:center;flex-wrap:wrap;">
+  <canvas id="barCanvas" width="350" height="240"></canvas>
+  <canvas id="pieCanvas" width="240" height="240"></canvas>
+</div>
+<p style="font-size:.82rem;color:var(--c-ink-muted);text-align:center;"><span data-zh="左：spot 表達；右：估算的比例 (NNLS-like)" data-en="Left: spot expression; Right: estimated proportions (NNLS-like)">左：spot 表達；右：估算比例</span></p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="陷阱" data-en="PITFALLS">陷阱</div>
+<h2 data-zh="三、常見陷阱與最佳實踐" data-en="III. Common pitfalls and best practices">三、常見陷阱</h2>
+<div data-lang="zh">
+<ul>
+<li><strong>Reference 必須來自相似組織。</strong>用心臟 scRNA reference 去 deconvolute 腦切片是災難。</li>
+<li><strong>細胞類型不在 reference 裡 = 看不見。</strong>deconvolution 只能輸出 reference 中存在的類型。</li>
+<li><strong>分辨「proportion」與「abundance」</strong>。cell2location 輸出 abundance（每 spot 有幾顆細胞）；RCTD/SPOTlight 多輸出 proportion（比例）。下游做 marker correlate 時要分清楚。</li>
+<li><strong>稀有細胞</strong>容易被 zero out。要驗證稀有細胞是否真的不存在於該空間，可借助 spatial domain 對照、或用 Tangram 把 sc 細胞直接映射。</li>
+</ul>
+</div>
+<div data-lang="en">
+<ul>
+<li><strong>Reference must match the tissue.</strong> Deconvolving a brain section with a cardiac scRNA reference is a disaster.</li>
+<li><strong>Cell types absent from the reference are invisible.</strong> Deconvolution outputs only types present in the reference.</li>
+<li><strong>Distinguish "proportion" vs "abundance."</strong> cell2location outputs abundance (cells per spot); RCTD/SPOTlight typically output proportions. Be careful when correlating with markers downstream.</li>
+<li><strong>Rare cells</strong> get zeroed out easily. Cross-check with spatial domains or use Tangram to map sc cells directly.</li>
+</ul>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / RCTD + CARD</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / cell2location</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># RCTD (spacexr)</span>
+<span class="func">library</span>(spacexr)
+ref &lt;- <span class="func">Reference</span>(sc_counts, sc_cell_types)
+puck &lt;- <span class="func">SpatialRNA</span>(coords, vis_counts)
+rctd &lt;- <span class="func">create.RCTD</span>(puck, ref, max_cores = <span class="num">8</span>)
+rctd &lt;- <span class="func">run.RCTD</span>(rctd, doublet_mode = <span class="str">"full"</span>)
+weights &lt;- rctd@results$weights  <span class="comment"># spot × cell-type</span>
+
+<span class="comment"># CARD</span>
+<span class="func">library</span>(CARD)
+card &lt;- <span class="func">createCARDObject</span>(sc_count=sc_counts, sc_meta=sc_meta,
+        spatial_count=vis_counts, spatial_location=coords,
+        ct.varname=<span class="str">"cellType"</span>, sample.varname=<span class="str">"sampleID"</span>)
+card &lt;- <span class="func">CARD_deconvolution</span>(card)</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="kw">import</span> cell2location <span class="kw">as</span> c2l
+<span class="kw">import</span> scvi
+
+<span class="comment"># 1. 用 scRNA reference 學 signature</span>
+c2l.models.RegressionModel.setup_anndata(adata_sc, labels_key=<span class="str">"cell_type"</span>, batch_key=<span class="str">"sample"</span>)
+mod = c2l.models.RegressionModel(adata_sc); mod.train(max_epochs=<span class="num">300</span>)
+adata_sc = mod.export_posterior(adata_sc)
+
+<span class="comment"># 2. 用 signature 解 spot</span>
+inf_aver = adata_sc.varm[<span class="str">"means_per_cluster_mu_fg"</span>]
+c2l.models.Cell2location.setup_anndata(adata_st, batch_key=<span class="str">"sample"</span>)
+mod = c2l.models.Cell2location(adata_st, cell_state_df=inf_aver,
+                                N_cells_per_location=<span class="num">8</span>,
+                                detection_alpha=<span class="num">20</span>)
+mod.train(max_epochs=<span class="num">3000</span>); adata_st = mod.export_posterior(adata_st)
+sq.pl.spatial_scatter(adata_st, color=[<span class="str">"q05_cell_abundance_w_sf"</span>])</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">1. 一個 spot 涵蓋的細胞類型沒出現在 reference 裡，會發生什麼？</p>
+<p data-lang="en">1. What happens if a spot's true cell type is missing from the reference?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 演算法自動發現新類型</span><span data-lang="en">A. The algorithm discovers a new type automatically</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 演算法自動報錯</span><span data-lang="en">B. The algorithm errors out</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 它會被分配到 reference 中最相似的類型 → 假陽性</span><span data-lang="en">C. It will be allocated to the most similar reference type → false positives</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. spot 會被刪除</span><span data-lang="en">D. The spot is removed</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">2. 想要 CPU-only、快速、且穩定的起點，建議？</p>
+<p data-lang="en">2. CPU-only, fast, and robust starting point?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. RCTD</span><span data-lang="en">A. RCTD</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. cell2location</span><span data-lang="en">B. cell2location</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. Tangram</span><span data-lang="en">C. Tangram</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. STdeconvolve</span><span data-lang="en">D. STdeconvolve</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">3. cell2location 跟 RCTD 主要輸出的差別？</p>
+<p data-lang="en">3. Key output difference between cell2location and RCTD?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 兩者都輸出細胞數</span><span data-lang="en">A. Both output cell counts</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. cell2location 輸出 abundance；RCTD 多輸出 proportion</span><span data-lang="en">B. cell2location outputs abundance; RCTD typically outputs proportion</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 兩者完全一樣</span><span data-lang="en">C. They are identical</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. cell2location 只能 R 用</span><span data-lang="en">D. cell2location is R-only</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="svgs.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 7: SVGs</span></a>
+<a href="sc-integration.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 9: scRNA Integration</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+// Deconvolution sim with 3 cell types and 6 marker genes
+const types = ['Tumor','Immune','Stroma'];
+const colors = ['#5b3e96','#e8a049','#3a9a7c'];
+// signature: type x gene
+const sig = [
+  [4,3,1,0,0,0],
+  [0,0,3,4,2,0],
+  [0,0,0,0,2,4]
+];
+function nnls(A, b, iter=200){
+  // simple projected gradient NNLS for small dim (3 unknowns)
+  const n = A[0].length;
+  let x = new Array(n).fill(1/n);
+  const At = (function(){const t=[];for(let i=0;i<n;i++){t.push(A.map(r=>r[i]));}return t;})();
+  function dot(a,b){let s=0;for(let i=0;i<a.length;i++)s+=a[i]*b[i];return s;}
+  function mul(M,v){return M.map(r=>dot(r,v));}
+  for(let k=0;k<iter;k++){
+    const r = mul(A,x).map((v,i)=>v-b[i]);
+    const grad = mul(At,r);
+    let lr=0.02;
+    x = x.map((xi,i)=>Math.max(0,xi-lr*grad[i]));
+    const s = x.reduce((a,b)=>a+b,0)||1; x = x.map(v=>v/s); // re-normalize
+  }
+  return x;
+}
+function draw(){
+  const noise = +document.getElementById('sliderNoise').value;
+  const compTumor = +document.getElementById('sliderComp').value;
+  // distribute remaining 0..(100-tumor) into immune:stroma 6:4
+  const rest = 100 - compTumor;
+  const immune = Math.round(rest*0.6), stroma = rest - immune;
+  document.getElementById('valNoise').textContent = noise.toFixed(2);
+  document.getElementById('valComp').textContent = `${compTumor}:${immune}:${stroma}`;
+  // synthesize spot expression
+  const trueProp = [compTumor, immune, stroma].map(v=>v/100);
+  const G=6;
+  const expr = new Array(G).fill(0);
+  for(let g=0;g<G;g++){
+    for(let t=0;t<3;t++) expr[g] += trueProp[t]*sig[t][g];
+    expr[g] += (Math.random()-0.5)*noise*5;
+  }
+  // build A = signature^T (6 × 3 matrix)
+  const A = [];
+  for(let g=0;g<G;g++){
+    const row = sig.map(s=>s[g]*(1+(Math.random()-0.5)*noise));
+    A.push(row);
+  }
+  const est = nnls(A, expr);
+  // bar chart of expr
+  const bar = document.getElementById('barCanvas'), bctx = bar.getContext('2d');
+  bctx.clearRect(0,0,bar.width,bar.height);
+  bctx.fillStyle = '#555'; bctx.font = '12px DM Sans,sans-serif';
+  bctx.fillText(I18n.get()==='zh'?'Spot 表達 (6 marker)':'Spot expression (6 markers)', 10, 14);
+  const maxE = Math.max(...expr,1);
+  expr.forEach((v,i)=>{
+    const h = Math.max(0,v)/maxE * 160;
+    bctx.fillStyle = '#7a5cc1';
+    bctx.fillRect(20+i*48, 220-h, 36, h);
+    bctx.fillStyle = '#555'; bctx.fillText('g'+(i+1), 26+i*48, 234);
+  });
+  // pie of estimate
+  const pie = document.getElementById('pieCanvas'), pctx = pie.getContext('2d');
+  pctx.clearRect(0,0,pie.width,pie.height);
+  let start = -Math.PI/2;
+  est.forEach((v,i)=>{
+    const ang = v*Math.PI*2;
+    pctx.beginPath(); pctx.moveTo(120,120);
+    pctx.arc(120,120,90,start,start+ang);
+    pctx.closePath(); pctx.fillStyle = colors[i]; pctx.fill();
+    start += ang;
+  });
+  // legend
+  pctx.font = '12px DM Sans,sans-serif';
+  est.forEach((v,i)=>{
+    pctx.fillStyle = colors[i]; pctx.fillRect(10, 10+i*18, 12, 12);
+    pctx.fillStyle = '#333';
+    pctx.fillText(`${types[i]}: ${(v*100).toFixed(0)}% (true ${(trueProp[i]*100).toFixed(0)}%)`, 28, 20+i*18);
+  });
+}
+document.getElementById('sliderNoise').oninput=draw;
+document.getElementById('sliderComp').oninput=draw;
+document.addEventListener('langchange',draw);
+draw();
+
+// Quiz
+const QF={
+  zh:{q1_y:'缺類型 → 強制分到最相似類型 → 假陽性。',q1_n:'正確答案已標示。',q2_y:'RCTD 是穩定的 CPU 起點。',q2_n:'正確答案已標示。',q3_y:'cell2location 給 abundance，RCTD 多給 proportion。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'Missing type → forced into nearest type → false positives.',q1_n:'Correct answer highlighted.',q2_y:'RCTD is the robust CPU starting point.',q2_n:'Correct answer highlighted.',q3_y:'cell2location → abundance; RCTD → proportions.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
