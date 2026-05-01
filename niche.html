@@ -1,0 +1,209 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 11: Niche & Microenvironment — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html" class="active">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 11 / 15</div>
+<h1 data-zh="生態棲位 (Niche)：把組織描述成「鄰居組合」" data-en="Niche & Microenvironment: tissue as 'neighborhood compositions'">生態棲位 (Niche)：把組織描述成「鄰居組合」</h1>
+<p class="subtitle" data-lang="zh">不只看「我是誰」，更看「我的鄰居是誰」——這就是 niche。</p>
+<p class="subtitle" data-lang="en">Not only "what cell am I" but also "who are my neighbors" — that is a niche.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="概念" data-en="CONCEPT">概念</div>
+<h2 data-zh="一、Spatial Domain vs Niche vs Cellular Neighborhood" data-en="I. Spatial Domain vs Niche vs Cellular Neighborhood">一、Spatial Domain vs Niche vs CN</h2>
+<table class="comp-table">
+<thead><tr><th data-zh="概念" data-en="Concept">概念</th><th data-zh="輸入" data-en="Input">輸入</th><th data-zh="目的" data-en="Goal">目的</th></tr></thead>
+<tbody>
+<tr><td><strong>Spatial Domain</strong></td><td data-lang="zh">spot/cell 的 expression + 位置</td><td data-lang="zh">把組織分成大區塊（皮層、髓質、腫瘤核心…）</td><td data-lang="en">spot/cell expression + position</td><td data-lang="en">Partition tissue into large regions (cortex, medulla, tumor core…)</td></tr>
+<tr><td><strong>Niche</strong></td><td data-lang="zh">每個 cell 的<strong>鄰域 cell-type 組成</strong></td><td data-lang="zh">分類「微環境」（如「T-rich 邊界 niche」、「血管周圍 niche」）</td><td data-lang="en">Each cell's <strong>neighbor composition</strong></td><td data-lang="en">Classify microenvironments ("T-rich margin niche", "perivascular niche")</td></tr>
+<tr><td><strong>Cellular Neighborhood (CN)</strong></td><td data-lang="zh">同 niche，更強調免疫/腫瘤 immunology 場景</td><td data-lang="zh">找出反覆出現的免疫架構（CODEX/MIBI 用詞）</td><td data-lang="en">Same as niche, immunology-focused term</td><td data-lang="en">Find recurrent immune architectures (term from CODEX/MIBI)</td></tr>
+</tbody></table>
+<div class="callout tip"><span class="callout-icon">💡</span><div>
+<span data-lang="zh"><strong>關鍵差別：</strong>spatial domain 看「<em>我自己</em>表達什麼」；niche 看「我<em>周遭</em>是誰」。同一個 T cell 可能在不同 niche 裡：腫瘤旁、血管旁、淋巴聚集區。</span>
+<span data-lang="en"><strong>Key distinction:</strong> spatial domain = "what <em>I</em> express"; niche = "who is <em>around</em> me". The same T cell can sit in many niches: tumor-adjacent, perivascular, lymphoid aggregate.</span>
+</div></div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="主流方法" data-en="METHODS">主流方法</h2>
+<h2 data-zh="二、四大主流工具" data-en="II. Four mainstream tools">二、主流工具</h2>
+<div class="card-grid cols-2">
+<div class="card"><h4>🧱 CellCharter</h4>
+<div data-lang="zh"><p>scvi-tools 系列出品。把 spatial graph 上的細胞先學成 latent embedding，再用 GMM 找 niche。支援 multi-omics（RNA + protein）整合。</p></div>
+<div data-lang="en"><p>From scvi-tools. Learns latent embeddings on the spatial graph, then GMM-clusters to find niches. Supports multi-omics (RNA + protein) integration.</p></div>
+</div>
+<div class="card"><h4>🧭 NicheCompass</h4>
+<div data-lang="zh"><p>把<strong>已知 signaling pathway</strong> 當 prior 嵌入 GNN，學出來的 niche 帶 pathway-level 解釋性。</p></div>
+<div data-lang="en"><p>Uses <strong>known signaling pathways</strong> as prior in a GNN; resulting niches carry pathway-level interpretability.</p></div>
+</div>
+<div class="card"><h4>🧪 scNiche</h4>
+<div data-lang="zh"><p>把 neighborhood cell-type 組成 + 影像衍生形態特徵一起學，特別針對 image-based ST。</p></div>
+<div data-lang="en"><p>Combines neighborhood cell-type composition with image-derived morphology — built for image-based ST.</p></div>
+</div>
+<div class="card"><h4>📊 Squidpy <code>nhood_enrichment</code></h4>
+<div data-lang="zh"><p>最簡單入門：用 permutation 檢定算「哪兩個 cluster 比隨機更常相鄰」。Squidpy 內建、零成本。</p></div>
+<div data-lang="en"><p>Simplest entry point: a permutation test for "which two clusters appear adjacent more than chance." Built into Squidpy, zero-cost.</p></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="工作流程" data-en="WORKFLOW">工作流程</div>
+<h2 data-zh="三、典型 niche 分析步驟" data-en="III. Typical niche analysis flow">三、典型 niche 分析步驟</h2>
+<div class="workflow">
+<div class="workflow-step" data-step="1"><h4 data-zh="先建細胞類型圖" data-en="Build cell-type map">先建細胞類型圖</h4><p data-lang="zh">image-based 直接 segmentation + clustering；spot-based 透過 deconvolution 取每 spot 的細胞類型分布。</p><p data-lang="en">image-based: segmentation + clustering; spot-based: get cell-type composition per spot via deconvolution.</p></div>
+<div class="workflow-step" data-step="2"><h4 data-zh="建 spatial graph" data-en="Build spatial graph">建 spatial graph</h4><p data-lang="zh">k-NN 或 Delaunay；image-based 常用 r = 30 µm 內的鄰居。</p><p data-lang="en">k-NN or Delaunay; image-based usually picks neighbors within r = 30 µm.</p></div>
+<div class="workflow-step" data-step="3"><h4 data-zh="計算每個 cell 的鄰居組成 (CN vector)" data-en="Compute each cell's neighbor composition (CN vector)">計算 CN vector</h4><p data-lang="zh">每顆細胞 → 鄰居中各 cell-type 的比例向量。</p><p data-lang="en">For each cell → vector of cell-type fractions among its neighbors.</p></div>
+<div class="workflow-step" data-step="4"><h4 data-zh="cluster CN vector" data-en="Cluster CN vectors">cluster CN vector</h4><p data-lang="zh">k-means / Leiden → 每群代表一種 niche。</p><p data-lang="en">k-means / Leiden → each cluster = a niche type.</p></div>
+<div class="workflow-step" data-step="5"><h4 data-zh="解釋與比較" data-en="Interpret & compare">解釋與比較</h4><p data-lang="zh">把 niche 標籤畫回組織，看是否符合解剖；組間（如治療 vs 對照）比較 niche 比例。</p><p data-lang="en">Project niche labels back onto tissue; compare niche frequencies across conditions (e.g. treated vs control).</p></div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：CN vector 的形成" data-en="Interactive: building a CN vector">互動：CN vector 的形成</h2>
+<div data-lang="zh"><p>下圖每個圓代表一顆細胞，顏色 = cell-type。把滑鼠移到某顆細胞上（或拖動半徑），看下方 bar chart：「該細胞的鄰居中有多少比例屬於 A、B、C 類」——這就是 CN vector。</p></div>
+<div data-lang="en"><p>Each dot is a cell; color = cell-type. Hover a cell (or change the radius) — the bar chart at the bottom shows "fraction of neighbors per type" = its CN vector.</p></div>
+<div class="interactive-panel">
+<div class="slider-group"><label><span data-zh="鄰居半徑 (px)" data-en="Neighbor radius (px)">鄰居半徑</span> <span id="valR">40</span></label><input type="range" id="sliderR" min="15" max="120" value="40" step="5"></div>
+<div class="canvas-container"><canvas id="niCanvas" width="700" height="320"></canvas></div>
+<canvas id="niBar" width="700" height="100" style="margin-top:8px;background:var(--c-surface-alt);border-radius:6px;"></canvas>
+<p style="font-size:.82rem;color:var(--c-ink-muted);text-align:center;"><span data-zh="移動滑鼠到任一細胞觀察其 CN vector" data-en="Hover any cell to see its CN vector">移動滑鼠到任一細胞觀察其 CN vector</span></p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / Seurat 鄰域</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / Squidpy + CellCharter</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># Seurat v5 內建 BuildNicheAssay (Visium / Xenium)</span>
+vis &lt;- <span class="func">BuildNicheAssay</span>(object = vis, fov = <span class="str">"fov"</span>, group.by = <span class="str">"celltype"</span>, niches.k = <span class="num">6</span>)
+<span class="func">SpatialDimPlot</span>(vis, group.by = <span class="str">"niches"</span>)</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="comment"># 簡易：Squidpy nhood_enrichment</span>
+sq.gr.spatial_neighbors(adata, coord_type=<span class="str">"generic"</span>, delaunay=<span class="kw">True</span>)
+sq.gr.nhood_enrichment(adata, cluster_key=<span class="str">"celltype"</span>)
+sq.pl.nhood_enrichment(adata, cluster_key=<span class="str">"celltype"</span>)
+
+<span class="comment"># 進階：CellCharter</span>
+<span class="kw">import</span> cellcharter <span class="kw">as</span> cc
+cc.gr.aggregate_neighbors(adata, n_layers=<span class="num">3</span>, aggregations=<span class="str">"mean"</span>)
+gmm = cc.tl.Cluster(model_class=<span class="str">"GaussianMixture"</span>, n_clusters=<span class="num">8</span>)
+gmm.fit(adata, use_rep=<span class="str">"X_cellcharter"</span>); adata.obs[<span class="str">"niche"</span>] = gmm.predict(adata, use_rep=<span class="str">"X_cellcharter"</span>)</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">1. Spatial domain 與 niche 最關鍵差別？</p>
+<p data-lang="en">1. Most important distinction between spatial domain and niche?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. niche 不需要空間資訊</span><span data-lang="en">A. Niche doesn't need spatial info</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. domain 看自己 expression；niche 看周遭鄰居組成</span><span data-lang="en">B. Domain looks at one's own expression; niche looks at surrounding neighbors</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 兩者完全相同</span><span data-lang="en">C. They are identical</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. niche 不能用 GNN</span><span data-lang="en">D. Niche can't use GNNs</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">2. 想要快速、零成本看「哪兩個 cluster 比隨機更常相鄰」，最方便？</p>
+<p data-lang="en">2. Quickest, zero-cost way to ask "which two clusters are adjacent more than chance"?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. CellCharter</span><span data-lang="en">A. CellCharter</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. NicheCompass</span><span data-lang="en">B. NicheCompass</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. Squidpy nhood_enrichment</span><span data-lang="en">C. Squidpy nhood_enrichment</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. SpatialDE</span><span data-lang="en">D. SpatialDE</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">3. NicheCompass 的特色？</p>
+<p data-lang="en">3. What distinguishes NicheCompass?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 把 signaling pathway 知識當 prior 嵌入模型</span><span data-lang="en">A. Embeds signaling-pathway priors into the model</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 不需 spatial 資訊</span><span data-lang="en">B. Needs no spatial info</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 只支援 R</span><span data-lang="en">C. R-only</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 取代 deconvolution</span><span data-lang="en">D. Replaces deconvolution</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="cell-communication.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 10: CCC</span></a>
+<a href="trajectory.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 12: Trajectory</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+const W=700,H=320,CV=document.getElementById('niCanvas'),CTX=CV.getContext('2d');
+const BAR=document.getElementById('niBar'),BCTX=BAR.getContext('2d');
+const types=['A','B','C']; const colors=['#5b3e96','#e8a049','#3a9a7c'];
+const cells=[];
+// 3 clusters with different niches
+for(let i=0;i<60;i++) cells.push({x:80+Math.random()*200, y:80+Math.random()*180, t:Math.random()<0.7?'A':(Math.random()<0.5?'B':'C')});
+for(let i=0;i<50;i++) cells.push({x:330+Math.random()*150, y:60+Math.random()*220, t:Math.random()<0.65?'B':(Math.random()<0.6?'A':'C')});
+for(let i=0;i<55;i++) cells.push({x:500+Math.random()*180, y:80+Math.random()*200, t:Math.random()<0.6?'C':(Math.random()<0.6?'A':'B')});
+let hovered=null;
+function neighbors(s,r){return cells.filter(t=>t!==s && (t.x-s.x)**2+(t.y-s.y)**2 <= r*r);}
+function draw(){
+  const r = +document.getElementById('sliderR').value;
+  document.getElementById('valR').textContent = r;
+  CTX.clearRect(0,0,W,H);
+  cells.forEach(s=>{
+    CTX.beginPath(); CTX.arc(s.x,s.y,5,0,Math.PI*2);
+    CTX.fillStyle = colors[types.indexOf(s.t)];
+    CTX.globalAlpha = 0.9; CTX.fill(); CTX.globalAlpha = 1;
+  });
+  if(hovered){
+    CTX.beginPath(); CTX.arc(hovered.x,hovered.y,r,0,Math.PI*2);
+    CTX.strokeStyle='rgba(91,62,150,0.8)'; CTX.lineWidth=1.4; CTX.setLineDash([4,3]); CTX.stroke();
+    CTX.setLineDash([]);
+    const nb=neighbors(hovered,r);
+    const counts={A:0,B:0,C:0};
+    nb.forEach(n=>counts[n.t]++);
+    const total=Math.max(1,nb.length);
+    BCTX.clearRect(0,0,BAR.width,BAR.height);
+    BCTX.font='12px DM Sans,sans-serif';
+    BCTX.fillStyle='#555';
+    BCTX.fillText((I18n.get()==='zh'?'CN vector — 鄰居共':' CN vector — neighbors:')+' '+nb.length, 10, 18);
+    types.forEach((t,i)=>{
+      const w = (counts[t]/total) * 360;
+      BCTX.fillStyle = colors[i];
+      BCTX.fillRect(180+i*180, 30, w, 32);
+      BCTX.fillStyle='#333';
+      BCTX.fillText(`${t}: ${counts[t]} (${Math.round(counts[t]/total*100)}%)`, 180+i*180, 86);
+    });
+  } else {
+    BCTX.clearRect(0,0,BAR.width,BAR.height);
+    BCTX.font='12px DM Sans,sans-serif'; BCTX.fillStyle='#888';
+    BCTX.fillText(I18n.get()==='zh'?'移動滑鼠到任一細胞':'Hover a cell to see its CN vector', 10, 50);
+  }
+}
+CV.addEventListener('mousemove',(e)=>{
+  const rect=CV.getBoundingClientRect();
+  const sx = CV.width/rect.width, sy = CV.height/rect.height;
+  const x=(e.clientX-rect.left)*sx, y=(e.clientY-rect.top)*sy;
+  let best=null,bd=1e9;
+  cells.forEach(c=>{const d=(c.x-x)**2+(c.y-y)**2; if(d<bd){bd=d;best=c;}});
+  if(bd<200){hovered=best;} else {hovered=null;}
+  draw();
+});
+document.getElementById('sliderR').oninput=draw;
+document.addEventListener('langchange',draw);
+draw();
+
+const QF={
+  zh:{q1_y:'domain 看自己；niche 看鄰居。',q1_n:'正確答案已標示。',q2_y:'Squidpy nhood_enrichment 一行直接做。',q2_n:'正確答案已標示。',q3_y:'NicheCompass 用 pathway prior。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'Domain = self expression; niche = neighbor composition.',q1_n:'Correct answer highlighted.',q2_y:'Squidpy nhood_enrichment is the one-liner.',q2_n:'Correct answer highlighted.',q3_y:'NicheCompass uses pathway priors.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
