@@ -1,0 +1,182 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 13: Multi-sample Integration — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html" class="active">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 13 / 15</div>
+<h1 data-zh="多樣本整合與 3D 重建" data-en="Multi-sample Integration & 3D Reconstruction">多樣本整合與 3D 重建</h1>
+<p class="subtitle" data-lang="zh">兩種任務：把多切片放到「同一個表達空間」(batch correction)，或把連續切片堆成 3D 結構。</p>
+<p class="subtitle" data-lang="en">Two tasks: align multiple slices into "one expression space" (batch correction), or stack serial sections into 3D.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="兩種任務" data-en="TWO TASKS">兩種任務</div>
+<h2 data-zh="一、兩種完全不同的「整合」" data-en="I. Two distinct kinds of 'integration'">一、兩種「整合」</h2>
+<div class="card-grid cols-2">
+<div class="card"><div class="card-icon">🧹</div><h4 data-zh="表達空間整合 (batch correction)" data-en="Expression-space integration (batch correction)">表達空間整合</h4>
+<div data-lang="zh"><p>不同樣本/批次/條件混在一起做下游分析（spatial domain、deconvolution）時，要先校正 batch effect。Harmony / scVI / Seurat anchors 都可用，但要小心過度校正。</p></div>
+<div data-lang="en"><p>When mixing samples/batches/conditions for downstream analysis (spatial domains, deconvolution), batch effects must be corrected. Harmony / scVI / Seurat anchors all work — beware over-correction.</p></div>
+</div>
+<div class="card"><div class="card-icon">🧱</div><h4 data-zh="物理座標對位 / 3D 重建" data-en="Physical alignment / 3D reconstruction">物理對位 / 3D</h4>
+<div data-lang="zh"><p>把<strong>連續切片</strong>沿 z 軸對齊，重建 3D 組織。PASTE / STAligner / STAIR 三大主流方法各有強項。</p></div>
+<div data-lang="en"><p>Align <strong>serial sections</strong> along z to reconstruct 3D tissue. Three mainstream tools: PASTE / STAligner / STAIR, each with different strengths.</p></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="主流方法" data-en="METHODS">主流方法</h2>
+<h2 data-zh="二、主流工具比較" data-en="II. Comparison of mainstream tools">二、主流工具比較</h2>
+<table class="comp-table">
+<thead><tr><th data-zh="工具" data-en="Tool">工具</th><th data-zh="任務" data-en="Task">任務</th><th data-zh="原理" data-en="Idea">原理</th><th data-zh="注意" data-en="Caveat">注意</th></tr></thead>
+<tbody>
+<tr><td><strong>Harmony</strong></td><td>batch</td><td data-lang="zh">迭代校正 PCA 嵌入</td><td data-lang="zh">scRNA 起源；ST 上 batch 校正高、生物保留低</td><td data-lang="en">Iteratively corrects PCA embeddings</td><td data-lang="en">scRNA-origin; high batch correction but low biological preservation in ST</td></tr>
+<tr><td><strong>Seurat anchors</strong></td><td>batch</td><td data-lang="zh">CCA + MNN-style anchors</td><td data-lang="zh">和 Seurat 流程整合度最好</td><td data-lang="en">CCA + MNN-style anchors</td><td data-lang="en">Best integration with Seurat workflow</td></tr>
+<tr><td><strong>scVI / scANVI</strong></td><td>batch</td><td data-lang="zh">VAE，可同時處理多個 covariate</td><td data-lang="zh">需 GPU；對大資料集擴展性好</td><td data-lang="en">VAE, handles multiple covariates</td><td data-lang="en">GPU needed; scales well</td></tr>
+<tr><td><strong>PASTE / PASTE2</strong></td><td>3D</td><td data-lang="zh">Optimal transport 對位相鄰切片</td><td data-lang="zh">需切片<strong>幾何相似</strong>；不適合不同條件 / 不同個體</td><td data-lang="en">Optimal transport on adjacent slices</td><td data-lang="en">Requires <strong>geometric similarity</strong>; poor for different conditions/individuals</td></tr>
+<tr><td><strong>STAligner</strong></td><td>both</td><td data-lang="zh">GNN + triplet loss，跨 platform 與條件穩定</td><td data-lang="zh">Nat Comp Sci 2023；推薦多條件整合</td><td data-lang="en">GNN + triplet loss, cross-platform robust</td><td data-lang="en">Nat Comput Sci 2023; recommended for multi-condition</td></tr>
+<tr><td><strong>STAIR</strong></td><td>both + 3D</td><td data-lang="zh">end-to-end：批次校正 → 2D 對位 → 3D 重建</td><td data-lang="zh">Genome Biology 2025；最新一站式方案</td><td data-lang="en">End-to-end: batch correction → 2D alignment → 3D reconstruction</td><td data-lang="en">Genome Biology 2025; newest all-in-one</td></tr>
+</tbody></table>
+<div class="callout warn"><span class="callout-icon">⚠️</span><div>
+<span data-lang="zh">2025 一篇 bioRxiv（Mar 2025）系統性比較顯示：對 ST 而言，<strong>biology preservation</strong> 跟 <strong>batch correction</strong> 是 trade-off。Harmony 校正最徹底但 biology 失分多；STAligner 在兩個指標上比較平衡。</span>
+<span data-lang="en">A 2025 bioRxiv benchmark (Mar 2025) found that in ST, <strong>biology preservation</strong> and <strong>batch correction</strong> are a clear trade-off. Harmony corrects most aggressively but loses biology; STAligner balances both better.</span>
+</div></div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：兩個切片的 batch effect 校正" data-en="Interactive: batch correction across two slices">互動：兩個切片的 batch correction</h2>
+<div data-lang="zh"><p>左側：兩個切片在 PCA 上明顯分開（受 batch 主導）。拖動「校正強度」觀察兩個 batch 重新混合，並觀察生物 cluster 是否仍可辨識。</p></div>
+<div data-lang="en"><p>Left: two batches separate in PCA (dominated by batch). Slide the strength to mix them — but watch whether the biological clusters remain distinguishable.</p></div>
+<div class="interactive-panel">
+<div class="slider-group"><label><span data-zh="校正強度" data-en="Correction strength">校正強度</span> <span id="valC">0.0</span></label><input type="range" id="sliderC" min="0" max="1" value="0" step="0.05"></div>
+<div class="canvas-container"><canvas id="msCanvas" width="700" height="320"></canvas></div>
+<p style="font-size:.82rem;color:var(--c-ink-muted);text-align:center;"><span data-zh="圈：細胞；外框 = batch；填色 = cell type" data-en="Circles = cells; outline = batch; fill = cell type">圈：細胞；外框 = batch；填色 = cell type</span></p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / Seurat + Harmony</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / scVI + STAligner / PASTE</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># Seurat v5 多樣本整合</span>
+combined &lt;- <span class="func">merge</span>(vis1, <span class="func">y</span> = <span class="func">list</span>(vis2, vis3), add.cell.ids = <span class="func">c</span>(<span class="str">"s1"</span>,<span class="str">"s2"</span>,<span class="str">"s3"</span>))
+combined &lt;- <span class="func">SCTransform</span>(combined, assay = <span class="str">"Spatial"</span>) |&gt; <span class="func">RunPCA</span>()
+<span class="func">library</span>(harmony)
+combined &lt;- <span class="func">RunHarmony</span>(combined, group.by.vars = <span class="str">"sample"</span>, reduction = <span class="str">"pca"</span>)
+combined &lt;- <span class="func">RunUMAP</span>(combined, reduction = <span class="str">"harmony"</span>, dims = <span class="num">1</span>:<span class="num">30</span>)
+<span class="func">SpatialDimPlot</span>(combined, label = <span class="kw">TRUE</span>)</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="comment"># scVI multi-batch</span>
+<span class="kw">import</span> scvi
+scvi.model.SCVI.setup_anndata(adata, batch_key=<span class="str">"sample"</span>)
+mod = scvi.model.SCVI(adata); mod.train()
+adata.obsm[<span class="str">"X_scvi"</span>] = mod.get_latent_representation()
+
+<span class="comment"># STAligner (跨切片整合 + alignment)</span>
+<span class="kw">import</span> STAligner
+adata_concat = STAligner.train_STAligner(adata_list=[a1,a2,a3], n_epochs=<span class="num">600</span>)
+
+<span class="comment"># PASTE 對位相鄰切片 → 3D</span>
+<span class="kw">import</span> paste <span class="kw">as</span> pst
+pis = pst.pairwise_align(a1, a2)        <span class="comment"># slice→slice transport</span>
+center, slices = pst.center_align([a1,a2,a3])  <span class="comment"># 對齊到 center slice</span></pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">1. PASTE 不適合用在哪一種情境？</p>
+<p data-lang="en">1. When is PASTE NOT appropriate?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 同一個小鼠的連續腦切片</span><span data-lang="en">A. Serial brain sections from one mouse</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 同個樣本相鄰兩切片的 3D 重建</span><span data-lang="en">B. 3D reconstruction from adjacent slices of one sample</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 不同個體 / 不同條件 / 幾何不相似的切片</span><span data-lang="en">C. Different individuals / conditions / geometrically dissimilar slices</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 取得 transport plan</span><span data-lang="en">D. Computing the transport plan</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">2. 2025 ST batch correction benchmark 顯示 Harmony 的特徵是？</p>
+<p data-lang="en">2. According to the 2025 ST benchmark, Harmony tends to:</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. batch correction 強，但 biology 保留偏弱</span><span data-lang="en">A. Strong batch correction but weaker biology preservation</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 兩者都最佳</span><span data-lang="en">B. Best on both</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 不能用</span><span data-lang="en">C. Doesn't work</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 只能 R 用</span><span data-lang="en">D. R-only</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">3. 想要一站式做完「批次校正 + 對位 + 3D」？</p>
+<p data-lang="en">3. End-to-end "batch correction + alignment + 3D reconstruction"?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. PASTE</span><span data-lang="en">A. PASTE</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. STAIR</span><span data-lang="en">B. STAIR</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. Harmony</span><span data-lang="en">C. Harmony</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. SpatialDE</span><span data-lang="en">D. SpatialDE</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="trajectory.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 12: Trajectory</span></a>
+<a href="segmentation.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 14: Segmentation</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+const W=700,H=320,CV=document.getElementById('msCanvas'),CTX=CV.getContext('2d');
+const types=['T1','T2','T3'];
+const fillCols=['#5b3e96','#e8a049','#3a9a7c'];
+const cells=[];
+// per cell: bx0,by0 = uncorrected coords; type; batch
+for(let b=0;b<2;b++){
+  for(let t=0;t<3;t++){
+    const cx = (t===0?180:t===1?340:500), cy=160;
+    const bx = b===0?-90:90, by = b===0?-50:50;
+    for(let i=0;i<24;i++){
+      cells.push({tx:cx+bx + (Math.random()-0.5)*60, ty:cy+by + (Math.random()-0.5)*60, t, b,
+                  cx, cy});
+    }
+  }
+}
+function draw(){
+  const c = +document.getElementById('sliderC').value;
+  document.getElementById('valC').textContent = c.toFixed(2);
+  CTX.clearRect(0,0,W,H);
+  CTX.font='12px DM Sans,sans-serif';
+  CTX.fillStyle='#888';
+  CTX.fillText(I18n.get()==='zh'?'PCA 空間（兩 batch、三 cell type）':'PCA space (two batches, three cell types)', 14, 18);
+  cells.forEach(p=>{
+    // pull coords toward cluster center cx,cy by factor c
+    const x = p.tx + (p.cx + (Math.random()-0.5)*30 - p.tx)*c;
+    const y = p.ty + (p.cy + (Math.random()-0.5)*30 - p.ty)*c;
+    CTX.beginPath(); CTX.arc(x,y,5.6,0,Math.PI*2);
+    CTX.fillStyle = fillCols[p.t]; CTX.fill();
+    CTX.lineWidth=1.5;
+    CTX.strokeStyle = p.b===0 ? '#222' : '#aaa';
+    CTX.stroke();
+  });
+  // legend
+  CTX.fillStyle='#333';
+  CTX.fillText(I18n.get()==='zh'?'外框 深=batch1 / 淺=batch2':'Outline dark=batch1 / light=batch2', 14, H-10);
+}
+document.getElementById('sliderC').oninput=draw;
+document.addEventListener('langchange',draw);
+draw();
+
+const QF={
+  zh:{q1_y:'PASTE 假設幾何相似，不適合差異大的情境。',q1_n:'正確答案已標示。',q2_y:'2025 benchmark 顯示 Harmony 在 ST 上 biology 失分。',q2_n:'正確答案已標示。',q3_y:'STAIR 是 2025 端到端方案。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'PASTE assumes geometric similarity — poor for divergent cases.',q1_n:'Correct answer highlighted.',q2_y:'The 2025 benchmark shows Harmony loses biology on ST.',q2_n:'Correct answer highlighted.',q3_y:'STAIR is the 2025 end-to-end pipeline.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
