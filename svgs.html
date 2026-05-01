@@ -1,0 +1,217 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 7: Spatially Variable Genes — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html" class="active">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 7 / 15</div>
+<h1 data-zh="空間變異基因 (SVGs)：找出表達跟「位置」有關的基因" data-en="Spatially Variable Genes: where expression follows location">空間變異基因 (SVGs)：找出表達跟「位置」有關的基因</h1>
+<p class="subtitle" data-lang="zh">不只是 highly variable，而是 expression 與空間座標有顯著關聯。</p>
+<p class="subtitle" data-lang="en">Not just highly variable — variance that is structured in space.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="概念" data-en="CONCEPT">概念</div>
+<h2 data-zh="一、SVG 的數學直覺" data-en="I. The math intuition of SVG">一、SVG 的數學直覺</h2>
+<div data-lang="zh">
+<p>給定基因 g 在每個 spot 的表達 e<sub>i</sub> 與座標 (x<sub>i</sub>, y<sub>i</sub>)，「SVG」測試的是：<strong>e 跟 (x, y) 之間是否存在比隨機更顯著的空間自相關 (spatial autocorrelation)</strong>。</p>
+<p>最常見的指標：</p>
+<ul>
+<li><strong>Moran's I</strong>：經典空間統計，把每個 spot 跟鄰居比較加權平均；快、可解釋。</li>
+<li><strong>Geary's C</strong>：類似 Moran's I 但對「相鄰差異」更敏感。</li>
+<li><strong>Gaussian Process</strong> 系列（SpatialDE、nnSVG）：把 expression 視為 GP，估計 lengthscale 與 variance。</li>
+<li><strong>SPARK / SPARK-X</strong>：用 multiple kernels 做 mixed-effects 檢定，scalable。</li>
+</ul>
+</div>
+<div data-lang="en">
+<p>Given gene g with expression e<sub>i</sub> at coordinate (x<sub>i</sub>, y<sub>i</sub>) per spot, the SVG test asks: <strong>is there significant spatial autocorrelation between e and (x, y) beyond chance?</strong></p>
+<p>Most common scores:</p>
+<ul>
+<li><strong>Moran's I</strong>: classic spatial statistic; weighted average of differences with neighbors. Fast, interpretable.</li>
+<li><strong>Geary's C</strong>: similar to Moran's I but more sensitive to local differences.</li>
+<li><strong>Gaussian Process</strong> family (SpatialDE, nnSVG): expression as GP — estimate lengthscale and variance.</li>
+<li><strong>SPARK / SPARK-X</strong>: mixed-effects tests with multiple kernels; scalable.</li>
+</ul>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="方法比較" data-en="METHODS">方法比較</div>
+<h2 data-zh="二、五大主流方法 (2025 benchmark)" data-en="II. Five mainstream methods (2025 benchmark)">二、五大主流方法</h2>
+<table class="comp-table">
+<thead><tr><th data-zh="方法" data-en="Method">方法</th><th data-zh="原理" data-en="Idea">原理</th><th data-zh="2025 benchmark" data-en="2025 benchmark">2025 benchmark</th><th data-zh="速度" data-en="Speed">速度</th></tr></thead>
+<tbody>
+<tr><td><strong>SPARK-X</strong></td><td data-lang="zh">multi-kernel non-parametric</td><td data-lang="zh">平均相關 0.88，<strong>整體第一</strong></td><td>★★★★★</td><td data-lang="en">Multi-kernel non-parametric</td><td data-lang="en">Avg correlation 0.88, <strong>top method</strong></td></tr>
+<tr><td><strong>SpatialDE2</strong></td><td>Gaussian Process</td><td data-lang="zh">平均相關 0.81</td><td>★★</td><td data-lang="en">Gaussian Process</td><td data-lang="en">Avg correlation 0.81</td></tr>
+<tr><td><strong>nnSVG</strong></td><td data-lang="zh">Nearest-neighbor GP，可 scale 到大資料</td><td data-lang="zh">平均相關 0.80；spatial-aware</td><td>★★★</td><td data-lang="en">Nearest-neighbor GP, scalable</td><td data-lang="en">Avg correlation 0.80; spatially-aware</td></tr>
+<tr><td><strong>Moran's I</strong></td><td data-lang="zh">傳統空間自相關</td><td data-lang="zh">平均相關 0.76，<strong>強大基線</strong></td><td>★★★★★</td><td data-lang="en">Classical spatial autocorrelation</td><td data-lang="en">Avg correlation 0.76, <strong>strong baseline</strong></td></tr>
+<tr><td><strong>SpatialDE</strong></td><td>原版 GP</td><td data-lang="zh">記憶體吃緊；早期工作的代表</td><td>★</td><td data-lang="en">Original GP</td><td data-lang="en">Memory hungry; historical reference</td></tr>
+</tbody></table>
+<div class="callout tip"><span class="callout-icon">💡</span><div>
+<span data-lang="zh"><strong>實務建議：</strong>大資料 → SPARK-X；想要解釋直觀 → Moran's I（Squidpy 內建）；要看 lengthscale 結構 → nnSVG。</span>
+<span data-lang="en"><strong>Practical tip:</strong> for large datasets → SPARK-X; for intuitive interpretation → Moran's I (built into Squidpy); to inspect lengthscale → nnSVG.</span>
+</div></div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：什麼樣的 expression pattern 會被判定為 SVG？" data-en="Interactive: which patterns flag as SVG?">互動：什麼樣的 pattern 會被判定為 SVG？</h2>
+<div data-lang="zh"><p>切換 4 種模擬模式，左側顯示空間表達，右上顯示 Moran's I（越大越「空間」）。觀察：均勻雜訊 → I≈0；連續梯度 → I 大；隨機高斑點 → I 中等。</p></div>
+<div data-lang="en"><p>Try four simulated patterns. Left: spatial expression. Top-right: Moran's I (larger = more spatial). Uniform noise → I≈0; smooth gradient → high I; random hotspots → moderate I.</p></div>
+<div class="interactive-panel">
+<div class="toggle-row">
+<button class="toggle-btn active" id="p_noise" data-zh="隨機雜訊" data-en="Uniform noise">隨機雜訊</button>
+<button class="toggle-btn" id="p_grad" data-zh="平滑梯度" data-en="Smooth gradient">平滑梯度</button>
+<button class="toggle-btn" id="p_blob" data-zh="局部熱區" data-en="Local hotspot">局部熱區</button>
+<button class="toggle-btn" id="p_strip" data-zh="條帶 (層狀)" data-en="Stripes (layered)">條帶</button>
+</div>
+<div class="sim-stats"><span class="sim-stat info" id="moran">Moran's I = —</span></div>
+<div class="canvas-container"><canvas id="svgCanvas" width="700" height="320"></canvas></div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / nnSVG + Seurat Moran</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / Squidpy + SPARK-X</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># nnSVG (Bioconductor)</span>
+<span class="func">library</span>(nnSVG)
+spe &lt;- <span class="func">nnSVG</span>(spe, assay_name = <span class="str">"logcounts"</span>)
+top &lt;- <span class="func">rowData</span>(spe)$gene_name[<span class="func">order</span>(<span class="func">rowData</span>(spe)$padj)][<span class="num">1</span>:<span class="num">20</span>]
+
+<span class="comment"># Seurat Moran</span>
+vis &lt;- <span class="func">FindSpatiallyVariableFeatures</span>(vis, assay = <span class="str">"SCT"</span>,
+        features = <span class="func">VariableFeatures</span>(vis), selection.method = <span class="str">"moransi"</span>)
+top &lt;- <span class="func">SpatiallyVariableFeatures</span>(vis)[<span class="num">1</span>:<span class="num">20</span>]
+<span class="func">SpatialFeaturePlot</span>(vis, features = top[<span class="num">1</span>:<span class="num">6</span>])</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="comment"># Squidpy Moran's I</span>
+sq.gr.spatial_neighbors(adata, coord_type=<span class="str">"generic"</span>, delaunay=<span class="kw">True</span>)
+sq.gr.spatial_autocorr(adata, mode=<span class="str">"moran"</span>, n_perms=<span class="num">100</span>, n_jobs=<span class="num">4</span>)
+top = adata.uns[<span class="str">"moranI"</span>].head(<span class="num">20</span>).index.tolist()
+sq.pl.spatial_scatter(adata, color=top[:<span class="num">6</span>])
+
+<span class="comment"># SPARK-X (R via rpy2 or直接用 R)；Python 替代：SpatialDE2</span>
+<span class="kw">import</span> SpatialDE
+res = SpatialDE.test(adata, layer=<span class="str">"logcounts"</span>)
+sig = res[res.padj &lt; <span class="num">0.05</span>].sort_values(<span class="str">"FSV"</span>, ascending=<span class="kw">False</span>)</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">1. 「Highly Variable Gene」一定是 SVG 嗎？</p>
+<p data-lang="en">1. Are HVGs always SVGs?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 是，兩者等同</span><span data-lang="en">A. Yes, they are equivalent</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 是，HVG 一定有空間結構</span><span data-lang="en">B. Yes, HVGs always have spatial structure</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 不一定，HVG 變異可能是雜訊也可能跨整片組織分散</span><span data-lang="en">C. Not necessarily — high variance can be noise or distributed without spatial structure</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 反過來才對 (SVG 一定是 HVG)</span><span data-lang="en">D. The reverse holds (SVG ⊂ HVG)</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">2. 2025 benchmark 中速度與準確度都領先的是？</p>
+<p data-lang="en">2. Best speed–accuracy trade-off in the 2025 benchmark?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. SPARK-X</span><span data-lang="en">A. SPARK-X</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. SpatialDE (原版)</span><span data-lang="en">B. SpatialDE (original)</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. K-means</span><span data-lang="en">C. K-means</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. Linear regression</span><span data-lang="en">D. Linear regression</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">3. Moran's I 的核心概念是？</p>
+<p data-lang="en">3. Core idea of Moran's I?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 計算每個基因的平均表達</span><span data-lang="en">A. Computes mean expression</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 量化「鄰近 spot 的表達是否比隨機更相似」</span><span data-lang="en">B. Quantifies whether neighbors' expressions are more similar than random</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 自動估算 cluster 數</span><span data-lang="en">C. Estimates cluster count</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 跟空間無關</span><span data-lang="en">D. Has nothing to do with space</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="spatial-domains.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 6: Spatial Domains</span></a>
+<a href="deconvolution.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 8: Deconvolution</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+// Pattern + Moran's I sim
+const W=700,H=320;const CV=document.getElementById('svgCanvas');const CTX=CV.getContext('2d');
+const cols=44, rows=18;
+const spots=[];
+for(let i=0;i<cols;i++) for(let j=0;j<rows;j++){
+  const x=15+i*((W-30)/cols)+(j%2?7:0), y=15+j*((H-30)/rows);
+  spots.push({x,y,e:0});
+}
+function setPattern(p){
+  spots.forEach(s=>{
+    if(p==='noise') s.e = Math.random();
+    else if(p==='grad') s.e = (s.x/W) + 0.08*(Math.random()-0.5);
+    else if(p==='blob'){
+      const cx=W*0.35,cy=H*0.5;
+      const dx=s.x-cx,dy=s.y-cy;
+      s.e = Math.exp(-(dx*dx+dy*dy)/8000) + 0.05*(Math.random()-0.5);
+    }
+    else if(p==='strip'){ s.e = 0.5 + 0.5*Math.sin(s.y/22) + 0.05*(Math.random()-0.5); }
+  });
+}
+function moran(){
+  // simple Moran's I with k-NN distance threshold (rook-ish)
+  const m = spots.reduce((a,s)=>a+s.e,0)/spots.length;
+  let num=0,den=0,W_=0;
+  spots.forEach(i=>{
+    den += (i.e-m)*(i.e-m);
+    spots.forEach(j=>{
+      if(i===j) return;
+      const dx=i.x-j.x,dy=i.y-j.y,d2=dx*dx+dy*dy;
+      if(d2<700){
+        const w=1; W_+=w;
+        num += w*(i.e-m)*(j.e-m);
+      }
+    });
+  });
+  return (spots.length / W_) * (num/den);
+}
+function color(v){
+  // viridis-like
+  const t = Math.max(0,Math.min(1,v));
+  const r=Math.round(68 + (253-68)*t);
+  const g=Math.round(1 + (231-1)*t);
+  const b=Math.round(84 + (37-84)*t);
+  return `rgb(${r},${g},${b})`;
+}
+function draw(p){
+  setPattern(p);
+  CTX.clearRect(0,0,W,H);
+  spots.forEach(s=>{
+    CTX.beginPath(); CTX.arc(s.x,s.y,5,0,Math.PI*2);
+    CTX.fillStyle = color(s.e); CTX.fill();
+  });
+  document.getElementById('moran').textContent = "Moran's I = " + moran().toFixed(3);
+}
+function setActive(id){['p_noise','p_grad','p_blob','p_strip'].forEach(b=>document.getElementById(b).classList.toggle('active',b===id));}
+document.getElementById('p_noise').onclick=()=>{setActive('p_noise');draw('noise');};
+document.getElementById('p_grad').onclick=()=>{setActive('p_grad');draw('grad');};
+document.getElementById('p_blob').onclick=()=>{setActive('p_blob');draw('blob');};
+document.getElementById('p_strip').onclick=()=>{setActive('p_strip');draw('strip');};
+draw('noise');
+
+// Quiz
+const QF={
+  zh:{q1_y:'HVG 不見得有空間結構，可能是雜訊。',q1_n:'正確答案已標示。',q2_y:'SPARK-X 平均相關 0.88、速度也快。',q2_n:'正確答案已標示。',q3_y:'Moran\'s I 正是空間自相關的標準量化。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'HVGs need not have spatial structure — may be noise.',q1_n:'Correct answer highlighted.',q2_y:'SPARK-X reaches 0.88 avg correlation with great speed.',q2_n:'Correct answer highlighted.',q3_y:'Moran\'s I is the canonical spatial autocorrelation statistic.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
