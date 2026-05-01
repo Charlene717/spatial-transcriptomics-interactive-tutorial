@@ -1,0 +1,204 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 4: Normalization — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html" class="active">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 4 / 15</div>
+<h1 data-zh="標準化：把 spot 之間放回同一條起跑線" data-en="Normalization: putting spots on the same scale">標準化：把 spot 之間放回同一條起跑線</h1>
+<p class="subtitle" data-lang="zh">spot 含多細胞時，「定序深度差異」會跟「真實細胞密度差異」糾纏在一起。</p>
+<p class="subtitle" data-lang="en">When spots contain mixed cells, "sequencing depth" gets entangled with "true cell density."</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="挑戰" data-en="CHALLENGE">挑戰</div>
+<h2 data-zh="一、ST normalization 的特殊難題" data-en="I. The special challenge of ST normalization">一、ST normalization 的特殊難題</h2>
+<div data-lang="zh">
+<p>scRNA normalization 想校正的只有「細胞間的 library size 差異」。在 ST 上，<strong>library size 差異本身可能就是訊號</strong>——細胞密集的區域真的就會比基質區有更多 RNA。如果無條件地把每個 spot 標準化到同一個總量，會洗掉真實的密度資訊。</p>
+<p>所以 ST 的 normalization 多了兩個考量：</p>
+<ul>
+<li>是不是要保留<strong>細胞密度差異</strong>？取決於下游分析（spatial domains 通常想保留；deconvolution 不一定）。</li>
+<li>spot 含混合細胞時，<strong>SCTransform 的 NB 假設可能失準</strong>（混合細胞的 mean-variance 不見得符合 NB）。</li>
+</ul>
+</div>
+<div data-lang="en">
+<p>scRNA normalization corrects only "between-cell library size." In ST, <strong>library-size differences may themselves be signal</strong> — dense regions naturally produce more RNA than stromal regions. Forcing every spot to the same total wipes out true density information.</p>
+<p>So ST normalization adds two considerations:</p>
+<ul>
+<li>Do we want to <strong>preserve cell-density differences</strong>? Depends on downstream task (spatial domains usually yes; deconvolution often not).</li>
+<li>For mixed-cell spots, <strong>SCTransform's NB assumption may break</strong> (mixed cells need not follow NB mean–variance).</li>
+</ul>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="方法比較" data-en="METHODS">方法比較</div>
+<h2 data-zh="二、三種主流方法" data-en="II. Three mainstream methods">二、三種主流方法</h2>
+<table class="comp-table">
+<thead><tr><th data-zh="方法" data-en="Method">方法</th><th data-zh="原理" data-en="Idea">原理</th><th data-zh="ST 優點" data-en="ST pros">ST 優點</th><th data-zh="缺點" data-en="Cons">缺點</th></tr></thead>
+<tbody>
+<tr><td><strong>LogNormalize</strong></td><td data-lang="zh">每 spot 除以總 UMI × 10 000，再 log1p</td><td data-lang="zh">最簡單、最快、最穩定</td><td data-lang="zh">未處理 mean–variance 偏差</td><td data-lang="en">Per-spot scale to 10 000, then log1p</td><td data-lang="en">Simple, fast, robust</td><td data-lang="en">Doesn't address mean–variance bias</td></tr>
+<tr><td><strong>SCTransform</strong></td><td data-lang="zh">負二項回歸，把 library size 當 covariate</td><td data-lang="zh">同時做 norm + HVG，下游 PCA 通常更乾淨</td><td data-lang="zh">spot 含混合細胞時 NB 假設失真；耗時</td><td data-lang="en">NB regression with library size as covariate</td><td data-lang="en">Joint norm + HVG; cleaner PCA</td><td data-lang="en">NB assumption breaks for mixed-cell spots; slow</td></tr>
+<tr><td><strong>scran size factor</strong></td><td data-lang="zh">先粗分群、再用 deconvolution 估 size factor</td><td data-lang="zh">對 zero-inflation 與異質性穩定</td><td data-lang="zh">需要先分群、實作較複雜</td><td data-lang="en">Pre-cluster, then deconvolution-based size factors</td><td data-lang="en">Robust to zero-inflation/heterogeneity</td><td data-lang="en">Needs pre-clustering, more steps</td></tr>
+</tbody></table>
+<div class="callout tip"><span class="callout-icon">💡</span><div>
+<span data-lang="zh">2024 之後 scverse / Bioconductor 共識：<strong>spot-based ST 預設用 LogNormalize 即可</strong>，下游若 PCA 結構雜亂再考慮 SCTransform；image-based（單細胞解析）回到 scRNA 邏輯，SCTransform 更合適。</span>
+<span data-lang="en">Post-2024 scverse / Bioconductor consensus: <strong>LogNormalize is a sensible default for spot-based ST</strong>; switch to SCTransform if PCA structure looks noisy. For image-based (single-cell) data, SCTransform follows scRNA logic and works well.</span>
+</div></div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：normalization 對 mean–variance 的影響" data-en="Interactive: how normalization reshapes mean–variance">互動：normalization 對 mean–variance 的影響</h2>
+<div data-lang="zh"><p>同一份模擬資料，切換不同 normalization。觀察：好的 normalization 會讓基因在<strong>整個 expression 範圍</strong>都不被 highly-expressed 基因主宰。</p></div>
+<div data-lang="en"><p>Same simulated data under different normalizations. A good normalization keeps the variance distribution flat across the expression range — not dominated by highly expressed genes.</p></div>
+<div class="interactive-panel">
+<div class="toggle-row">
+<button class="toggle-btn active" id="m_raw" data-zh="原始 (raw)" data-en="Raw">原始 (raw)</button>
+<button class="toggle-btn" id="m_log" data-zh="LogNormalize" data-en="LogNormalize">LogNormalize</button>
+<button class="toggle-btn" id="m_sct" data-zh="SCTransform-like" data-en="SCTransform-like">SCTransform-like</button>
+</div>
+<div class="chart-container"><canvas id="mvChart"></canvas></div>
+<p style="font-size:.82rem;color:var(--c-ink-muted);text-align:center;"><span data-zh="X：log10(mean count)；Y：log10(variance)" data-en="X: log10(mean count); Y: log10(variance)">X：log10(mean count)；Y：log10(variance)</span></p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / Seurat</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / Scanpy</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># 方法 1：LogNormalize</span>
+vis &lt;- <span class="func">NormalizeData</span>(vis, normalization.method = <span class="str">"LogNormalize"</span>, scale.factor = <span class="num">10000</span>)
+
+<span class="comment"># 方法 2：SCTransform (建議單一切片或單細胞解析資料)</span>
+vis &lt;- <span class="func">SCTransform</span>(vis, assay = <span class="str">"Spatial"</span>, verbose = <span class="kw">FALSE</span>)
+
+<span class="comment"># 方法 3：scran size factor (Bioconductor)</span>
+<span class="func">library</span>(scran)
+qclust &lt;- <span class="func">quickCluster</span>(spe, min.size = <span class="num">100</span>)
+spe &lt;- <span class="func">computeSumFactors</span>(spe, clusters = qclust)
+spe &lt;- <span class="func">logNormCounts</span>(spe)</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="comment"># LogNormalize (Scanpy default)</span>
+sc.pp.normalize_total(adata, target_sum=<span class="num">1e4</span>)
+sc.pp.log1p(adata)
+
+<span class="comment"># 也可走 scran 風格 size factor (透過 anndata2ri)</span>
+<span class="kw">import</span> scran_python <span class="kw">as</span> sp
+sf = sp.compute_size_factors(adata)
+adata.X = adata.X / sf[:,<span class="kw">None</span>]
+
+<span class="comment"># 或 SCTransform 風格 (Pearson residuals)</span>
+sc.experimental.pp.normalize_pearson_residuals(adata)</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">1. 為什麼在 spot-based ST 上「強制每 spot 標準化到相同總量」可能造成資訊流失？</p>
+<p data-lang="en">1. Why can "force-scale every spot to the same total" lose information in spot-based ST?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 因為 NGS 不準</span><span data-lang="en">A. Because NGS is inaccurate</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 因為 log 轉換是有損的</span><span data-lang="en">B. Because log transform is lossy</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 因為 spot 的總 UMI 部分反映了真實細胞密度</span><span data-lang="en">C. Because total UMI per spot partly reflects true cell density</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 因為 Visium 不允許標準化</span><span data-lang="en">D. Because Visium doesn't allow normalization</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">2. 對於混合細胞嚴重的 Visium spot，下列敘述何者較合理？</p>
+<p data-lang="en">2. For Visium spots with strong cell mixing, which is more reasonable?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. SCTransform 仍然完全有效</span><span data-lang="en">A. SCTransform remains fully appropriate</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. NB 假設可能失真，LogNormalize 通常是穩定起點</span><span data-lang="en">B. NB assumption may break — LogNormalize is a robust default</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 不需要任何 normalization</span><span data-lang="en">C. No normalization needed</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 只能用 raw counts</span><span data-lang="en">D. Only raw counts can be used</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">3. scran 的 size factor 為什麼比簡單的 library size 穩定？</p>
+<p data-lang="en">3. Why are scran size factors more stable than simple library sizes?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 它先粗分群再 deconvolution，避免高表達基因主宰</span><span data-lang="en">A. It pre-clusters and uses deconvolution to avoid bias from top genes</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 它直接抹掉 library size</span><span data-lang="en">B. It just zeroes out library size</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 它只能用在 image-based 平台</span><span data-lang="en">C. It only works on image-based platforms</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 它跟 scRNA 沒有關係</span><span data-lang="en">D. It is unrelated to scRNA</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="qc.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 3: QC</span></a>
+<a href="dim-reduction.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 5: DimRed</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+// Mean-variance simulation
+function randn(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const Ngene=600, Nspot=400;
+// gene mean ~ lognormal
+const means = Array.from({length:Ngene},()=>Math.exp(randn()*1.2 + 0.5));
+// per-spot library size
+const libs  = Array.from({length:Nspot},()=>Math.exp(randn()*0.4 + 8));
+function genCounts(){
+  const counts=[];
+  for(let g=0;g<Ngene;g++){
+    const row=new Float32Array(Nspot);
+    for(let s=0;s<Nspot;s++){
+      // poisson-ish ~ mean*lib/median(lib)
+      const lam = means[g] * libs[s] / 3000;
+      // approximate poisson
+      let k=0,p=Math.exp(-lam),s_=p,u=Math.random();
+      while(u>s_ && k<200){k++; p*=lam/k; s_+=p;}
+      row[s]=k;
+    }
+    counts.push(row);
+  }
+  return counts;
+}
+const counts=genCounts();
+function transform(mode){
+  return counts.map((row,gi)=>{
+    let arr=Array.from(row);
+    if(mode==='log'){
+      arr = arr.map((v,si)=> Math.log1p(v/libs[si]*10000));
+    } else if(mode==='sct'){
+      // pearson residuals approximation: (y - mu)/sqrt(mu+mu^2/theta), theta=10
+      const mu_ = arr.map((v,si)=> means[gi]*libs[si]/3000);
+      arr = arr.map((v,i)=>{const m=mu_[i]; return (v-m)/Math.sqrt(m + m*m/10 + 1e-3);});
+    }
+    const m = arr.reduce((a,b)=>a+b,0)/arr.length;
+    const v = arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length;
+    return {x: Math.log10(m+1e-3), y: Math.log10(v+1e-6)};
+  });
+}
+const ctx=document.getElementById('mvChart');
+const mvChart=new Chart(ctx,{type:'scatter',data:{datasets:[{label:'gene',data:[],backgroundColor:'rgba(91,62,150,0.45)',borderColor:'rgba(91,62,150,0.6)',borderWidth:0.5,pointRadius:2.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'log10(mean)'}},y:{title:{display:true,text:'log10(variance)'}}}}});
+function setMode(id){
+  ['m_raw','m_log','m_sct'].forEach(b=>document.getElementById(b).classList.toggle('active',b===id));
+  const mode = id==='m_raw'?'raw':id==='m_log'?'log':'sct';
+  mvChart.data.datasets[0].data = transform(mode);
+  mvChart.update('none');
+}
+document.getElementById('m_raw').onclick=()=>setMode('m_raw');
+document.getElementById('m_log').onclick=()=>setMode('m_log');
+document.getElementById('m_sct').onclick=()=>setMode('m_sct');
+setMode('m_raw');
+
+// Quiz
+const QF={
+  zh:{q1_y:'總 UMI 反映細胞密度，是真實生物訊號之一。',q1_n:'正確答案已標示。',q2_y:'NB 假設在混合細胞 spot 不一定成立，LogNormalize 較穩。',q2_n:'正確答案已標示。',q3_y:'scran 用 quickCluster + deconvolution 計算 size factor。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'Total UMI reflects cell density — part of the real signal.',q1_n:'Correct answer highlighted.',q2_y:'NB doesn\'t always hold for mixed-cell spots; LogNormalize is more robust.',q2_n:'Correct answer highlighted.',q3_y:'scran uses quickCluster + deconvolution to derive size factors.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
