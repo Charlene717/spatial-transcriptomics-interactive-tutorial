@@ -1,0 +1,204 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 14: Cell Segmentation — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html" class="active">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 14 / 15</div>
+<h1 data-zh="細胞切割：image-based ST 的隱形瓶頸" data-en="Cell Segmentation: the silent bottleneck of image-based ST">細胞切割：image-based ST 的隱形瓶頸</h1>
+<p class="subtitle" data-lang="zh">Xenium / MERFISH / CosMx 的單細胞解析依賴於「先把每顆細胞圈出來」這一步，且每種方法的偏差都不一樣。</p>
+<p class="subtitle" data-lang="en">Single-cell resolution on Xenium / MERFISH / CosMx depends on "outlining each cell" — and every method has its own bias.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="為什麼難" data-en="WHY HARD">為什麼難</div>
+<h2 data-zh="一、為什麼 segmentation 是隱形瓶頸？" data-en="I. Why segmentation is a silent bottleneck">一、為什麼是隱形瓶頸？</h2>
+<div data-lang="zh">
+<p>image-based 平台輸出的是<strong>每個 transcript 的 (x, y, z) 點雲</strong>。要做下游的 cluster / DE / niche，必須先把這些 transcript 分配到「細胞」這個單位。錯一步，後面整套分析都跟著錯：</p>
+<ul>
+<li><strong>分太細</strong>：一顆細胞被切成 2-3 個小細胞 → 表達被稀釋 → 真實 cell type 跑掉。</li>
+<li><strong>分太大</strong>：兩顆相鄰細胞合在一起 → 變成「合成 doublet」→ 形成假的混合細胞群。</li>
+<li><strong>邊界錯位</strong>：transcript 被歸給隔壁細胞 → marker 表達洩漏。</li>
+</ul>
+<p>2025 bioRxiv（Aug）系統性研究指出，<strong>絕大多數已發表的研究都直接套用預設 segmentation，沒做驗證</strong>，這是領域目前最大的盲點之一。</p>
+</div>
+<div data-lang="en">
+<p>Image-based platforms output a <strong>point cloud of (x, y, z) transcripts</strong>. Before any clustering / DE / niche analysis, you must assign transcripts to "cells." A mistake here cascades through everything downstream:</p>
+<ul>
+<li><strong>Over-segmentation:</strong> one cell split into 2–3 → expression diluted → cell types lost.</li>
+<li><strong>Under-segmentation:</strong> two neighbors merged → "synthetic doublets" → fake mixed populations.</li>
+<li><strong>Boundary error:</strong> transcripts assigned to the wrong neighbor → leaked markers.</li>
+</ul>
+<p>A 2025 bioRxiv study (Aug 2025) shows <strong>most published image-based ST studies use default segmentation without validation</strong> — this is currently one of the field's biggest blind spots.</p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="主流方法" data-en="METHODS">主流方法</h2>
+<h2 data-zh="二、主流方法" data-en="II. Mainstream methods">二、主流方法</h2>
+<table class="comp-table">
+<thead><tr><th data-zh="方法" data-en="Method">方法</th><th data-zh="輸入" data-en="Input">輸入</th><th data-zh="原理" data-en="Idea">原理</th><th data-zh="優劣" data-en="Notes">優劣</th></tr></thead>
+<tbody>
+<tr><td><strong>Cellpose</strong></td><td data-lang="zh">DAPI / membrane stain</td><td data-lang="zh">U-Net 預訓練模型</td><td data-lang="zh">速度快、結果穩定；MERFISH/Vizgen 預設</td><td data-lang="en">DAPI / membrane stain</td><td data-lang="en">U-Net pretrained</td><td data-lang="en">Fast, stable; default in MERFISH/Vizgen</td></tr>
+<tr><td><strong>Baysor</strong></td><td data-lang="zh">transcript 點雲（可不需影像）</td><td data-lang="zh">機率模型，按 transcript 共現分群</td><td data-lang="zh">無 nucleus stain 也可用；參數敏感</td><td data-lang="en">Transcript point cloud (optionally with image)</td><td data-lang="en">Probabilistic, clusters by co-occurrence</td><td data-lang="en">Works without nuclear stain; parameter-sensitive</td></tr>
+<tr><td><strong>proseg</strong></td><td data-lang="zh">transcript 點雲</td><td data-lang="zh">最新（2024）probabilistic、scalable</td><td data-lang="zh">在 Xenium 大資料上速度極佳</td><td data-lang="en">Transcript point cloud</td><td data-lang="en">Newest (2024), probabilistic, scalable</td><td data-lang="en">Excellent speed on large Xenium datasets</td></tr>
+<tr><td><strong>StarDist / Mesmer</strong></td><td data-lang="zh">multi-channel 影像</td><td data-lang="zh">Star-convex polygon 預測</td><td data-lang="zh">處理 H&E 與 IF 表現好</td><td data-lang="en">Multi-channel images</td><td data-lang="en">Star-convex polygon prediction</td><td data-lang="en">Strong on H&E and IF</td></tr>
+<tr><td><strong>UCS (2025)</strong></td><td data-lang="zh">影像 + transcript</td><td data-lang="zh">統一 deep learning，融合 imaging + transcript signal</td><td data-lang="zh">最新跨平台統一方案</td><td data-lang="en">Image + transcript</td><td data-lang="en">Unified deep learning combining both modalities</td><td data-lang="en">Newest unified cross-platform method</td></tr>
+</tbody></table>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="工作流程" data-en="WORKFLOW">工作流程</div>
+<h2 data-zh="三、segmentation 之後要做的事" data-en="III. What to do after segmentation">三、之後要做的事</h2>
+<div class="workflow">
+<div class="workflow-step" data-step="1"><h4 data-zh="生成 cell × gene 矩陣" data-en="Build cell × gene matrix">cell × gene 矩陣</h4><p data-lang="zh">把每個 transcript 點根據 segmentation 標籤累加到所屬細胞，輸出標準 AnnData。</p><p data-lang="en">Sum transcripts per segmented cell to produce a standard AnnData.</p></div>
+<div class="workflow-step" data-step="2"><h4 data-zh="QC：cell area、transcript 總數、unassigned 比例" data-en="QC: cell area, # transcripts, % unassigned">QC</h4><p data-lang="zh">過小（&lt; 10 transcripts）或過大（&gt; 99% percentile）的細胞通常是切割誤差。</p><p data-lang="en">Cells too small (&lt; 10 transcripts) or too large (&gt; 99th pct) are usually segmentation errors.</p></div>
+<div class="workflow-step" data-step="3"><h4 data-zh="標準下游：cluster + annotate" data-en="Downstream: cluster + annotate">標準下游</h4><p data-lang="zh">完全像 scRNA：normalization → HVG → PCA → Leiden → marker 註釋。</p><p data-lang="en">Looks like scRNA: normalization → HVG → PCA → Leiden → marker annotation.</p></div>
+<div class="workflow-step" data-step="4"><h4 data-zh="空間分析（niche / CCC）" data-en="Spatial analysis (niche / CCC)">空間分析</h4><p data-lang="zh">回到 Step 11 (Niche) / Step 10 (CCC)。Image-based 此階段比 spot-based 容易，因為單細胞 + 真實鄰接已知。</p><p data-lang="en">Back to Step 11 (Niche) / Step 10 (CCC). Image-based makes this easier than spot-based — single-cell adjacency is exactly known.</p></div>
+</div>
+<div class="callout warn"><span class="callout-icon">⚠️</span><div>
+<span data-lang="zh"><strong>必做的健康檢查：</strong>抽樣 3-5 個區域，把 segmentation 邊界畫到 H&E/DAPI 上目視；統計「平均 transcript / cell」、「unassigned transcript 比例」；至少跑一個替代方法做 sanity check。</span>
+<span data-lang="en"><strong>Mandatory sanity check:</strong> overlay segmentation on H&E/DAPI for 3–5 random ROIs; report mean transcripts/cell and unassigned-transcript fraction; run an alternative method for sanity comparison.</span>
+</div></div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：segmentation 半徑對細胞數的影響" data-en="Interactive: segmentation radius and inferred cell count">互動：segmentation 半徑</h2>
+<div data-lang="zh"><p>下圖：黑色 + 灰色為「真實的兩個相鄰細胞」（DAPI 以中心圓表示）。拖動「假設細胞半徑」，觀察 transcript 點被分配的方式：太小 → over-seg；太大 → 兩細胞合併。</p></div>
+<div data-lang="en"><p>Below: two adjacent ground-truth cells (DAPI shown as inner circle). Move the "assumed cell radius" — small → over-segmentation; large → merged.</p></div>
+<div class="interactive-panel">
+<div class="slider-group"><label><span data-zh="假設細胞半徑 (px)" data-en="Assumed cell radius (px)">假設半徑</span> <span id="valSr">35</span></label><input type="range" id="sliderSr" min="10" max="80" value="35" step="1"></div>
+<div class="sim-stats"><span class="sim-stat info" id="segStat">—</span></div>
+<div class="canvas-container"><canvas id="segCanvas" width="700" height="320"></canvas></div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / Seurat Xenium</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / Cellpose + Baysor</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># Seurat v5 直接讀 Xenium 預設 segmentation</span>
+xen &lt;- <span class="func">LoadXenium</span>(<span class="str">"xenium_out/"</span>, fov = <span class="str">"fov"</span>)
+<span class="func">ImageDimPlot</span>(xen, fov = <span class="str">"fov"</span>, axes = <span class="kw">TRUE</span>, cols = <span class="str">"polychrome"</span>)
+xen &lt;- <span class="func">SCTransform</span>(xen, assay = <span class="str">"Xenium"</span>) |&gt; <span class="func">RunPCA</span>() |&gt; <span class="func">FindClusters</span>(resolution = <span class="num">0.4</span>)</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="comment"># Cellpose (DAPI 通道)</span>
+<span class="kw">from</span> cellpose <span class="kw">import</span> models
+mod = models.Cellpose(model_type=<span class="str">"cyto3"</span>)
+masks, flows, styles, diams = mod.eval(dapi_img, diameter=<span class="num">25</span>, channels=[<span class="num">0</span>,<span class="num">0</span>])
+
+<span class="comment"># Baysor (CLI)</span>
+<span class="comment"># baysor run -x x -y y -g gene transcripts.csv -p priors.tif -o baysor_out/</span>
+
+<span class="comment"># proseg (CLI, 速度快)</span>
+<span class="comment"># proseg transcripts.csv --xenium -o proseg_out/</span>
+
+<span class="comment"># 用 segmentation mask 把 transcripts 累加成 AnnData</span>
+<span class="kw">import</span> spatialdata <span class="kw">as</span> sd
+sdata = sd.read_zarr(<span class="str">"xenium.zarr"</span>)
+adata = sdata.aggregate(by=<span class="str">"cell_boundaries"</span>, value_key=<span class="str">"transcripts"</span>)</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">1. 在 image-based ST 上 over-segmentation 會導致？</p>
+<p data-lang="en">1. Over-segmentation in image-based ST causes:</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 一顆真細胞被切成多個小細胞，表達被稀釋</span><span data-lang="en">A. A real cell gets split into many small cells with diluted expression</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 完全沒有問題</span><span data-lang="en">B. No problem at all</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 增加細胞 marker 表達</span><span data-lang="en">C. Increases marker expression</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 等同 doublet detection</span><span data-lang="en">D. Equivalent to doublet detection</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">2. 沒有 nuclear stain 影像時，下列何者最能幫忙？</p>
+<p data-lang="en">2. Without nuclear stain, which method works best?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. Cellpose</span><span data-lang="en">A. Cellpose</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. Mesmer</span><span data-lang="en">B. Mesmer</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. Baysor / proseg（直接用 transcript 點雲）</span><span data-lang="en">C. Baysor / proseg (uses transcript cloud directly)</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. PASTE</span><span data-lang="en">D. PASTE</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">3. 2025 bioRxiv 對 segmentation 提出的最大警告是？</p>
+<p data-lang="en">3. Main warning from the 2025 bioRxiv on segmentation?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. Cellpose 已不再可用</span><span data-lang="en">A. Cellpose is deprecated</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 多數論文沒做 segmentation 驗證</span><span data-lang="en">B. Most papers skip segmentation validation</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. Xenium 不需要 segmentation</span><span data-lang="en">C. Xenium needs no segmentation</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. Baysor 永遠是最佳選擇</span><span data-lang="en">D. Baysor is always optimal</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="multi-sample.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 13: Multi-sample</span></a>
+<a href="visium-hd-histology.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 15: HD / Histology</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+const W=700,H=320,CV=document.getElementById('segCanvas'),CTX=CV.getContext('2d');
+// 2 ground-truth cells
+const cellA={x:280,y:160,r:38,col:'#5b3e96'};
+const cellB={x:400,y:160,r:38,col:'#e8a049'};
+const transcripts=[];
+function gauss2(cx,cy,sd){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();const z0=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);const z1=Math.sqrt(-2*Math.log(u))*Math.sin(2*Math.PI*v);return [cx+z0*sd, cy+z1*sd];}
+for(let i=0;i<160;i++){const [x,y]=gauss2(cellA.x,cellA.y,18);transcripts.push({x,y,gt:'A'});}
+for(let i=0;i<160;i++){const [x,y]=gauss2(cellB.x,cellB.y,18);transcripts.push({x,y,gt:'B'});}
+function draw(){
+  const r = +document.getElementById('sliderSr').value;
+  document.getElementById('valSr').textContent = r;
+  CTX.clearRect(0,0,W,H);
+  // ground-truth nuclei
+  CTX.fillStyle='rgba(60,40,140,0.18)'; CTX.beginPath(); CTX.arc(cellA.x,cellA.y,12,0,Math.PI*2); CTX.fill();
+  CTX.fillStyle='rgba(216,107,42,0.18)'; CTX.beginPath(); CTX.arc(cellB.x,cellB.y,12,0,Math.PI*2); CTX.fill();
+  // candidate cell circles (centered on the two true cell centroids and intermediate)
+  const candidates = [cellA,cellB];
+  CTX.strokeStyle='rgba(91,62,150,0.7)'; CTX.lineWidth=1.4; CTX.setLineDash([4,3]);
+  candidates.forEach(c=>{CTX.beginPath();CTX.arc(c.x,c.y,r,0,Math.PI*2);CTX.stroke();});
+  CTX.setLineDash([]);
+  // assign transcripts: take nearest centroid within r
+  let inA=0,inB=0,unassigned=0,leak=0;
+  transcripts.forEach(t=>{
+    const dA=Math.hypot(t.x-cellA.x,t.y-cellA.y);
+    const dB=Math.hypot(t.x-cellB.x,t.y-cellB.y);
+    let assign=null;
+    if(dA<=r && dA<=dB) assign='A';
+    else if(dB<=r && dB<dA) assign='B';
+    else assign=null;
+    let col;
+    if(assign==='A'){inA++; col='rgba(60,40,140,0.85)';}
+    else if(assign==='B'){inB++; col='rgba(216,107,42,0.85)';}
+    else {unassigned++; col='rgba(120,120,120,0.4)';}
+    if(assign && assign!==t.gt) leak++;
+    CTX.beginPath(); CTX.arc(t.x,t.y,1.6,0,Math.PI*2);
+    CTX.fillStyle=col; CTX.fill();
+  });
+  const L=I18n.get();
+  document.getElementById('segStat').textContent =
+    (L==='zh'? `cellA: ${inA}　cellB: ${inB}　未分配: ${unassigned}　跨界誤判: ${leak}` :
+              `cellA: ${inA} | cellB: ${inB} | unassigned: ${unassigned} | misassigned: ${leak}`);
+}
+document.getElementById('sliderSr').oninput=draw;
+document.addEventListener('langchange',draw);
+draw();
+
+const QF={
+  zh:{q1_y:'over-seg = 一顆細胞變多顆，表達稀釋。',q1_n:'正確答案已標示。',q2_y:'Baysor / proseg 直接用 transcript 點雲。',q2_n:'正確答案已標示。',q3_y:'多數論文沒做 segmentation 驗證是領域盲點。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'Over-seg = one cell split, expression diluted.',q1_n:'Correct answer highlighted.',q2_y:'Baysor / proseg work on transcript clouds directly.',q2_n:'Correct answer highlighted.',q3_y:'Most papers skip segmentation validation — a major blind spot.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
