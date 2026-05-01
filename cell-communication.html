@@ -1,0 +1,185 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 10: Cell-Cell Communication — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html" class="active">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 10 / 15</div>
+<h1 data-zh="空間細胞通訊：把距離納入 ligand-receptor" data-en="Spatial Cell-Cell Communication: distance-aware ligand-receptor">空間細胞通訊：把距離納入 ligand-receptor</h1>
+<p class="subtitle" data-lang="zh">scRNA 的 CellChat / CellPhoneDB 是「全組織配對」；ST 上「鄰近」才是真實。</p>
+<p class="subtitle" data-lang="en">scRNA's CellChat / CellPhoneDB pair across the entire tissue; in ST, "neighborhood" is what is real.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="關鍵差異" data-en="KEY DIFFERENCE">關鍵差異</div>
+<h2 data-zh="一、空間 CCC 跟 scRNA CCC 的根本不同" data-en="I. Why spatial CCC differs from scRNA CCC">一、空間 CCC 跟 scRNA CCC 的根本不同</h2>
+<div data-lang="zh">
+<p>細胞通訊的核心是<strong>「ligand 表達在 A，receptor 表達在 B，且 A 和 B 真的接觸到」</strong>。在 scRNA，因為失去座標，第三個條件被忽略：CellPhoneDB 與 CellChat 假設「同 cluster 內所有細胞都可能跟另一 cluster 全部細胞互動」。</p>
+<p>在 ST 我們可以把「實體距離」加進去——只接受「物理上相鄰」的 LR 互動。這對於 paracrine/juxtacrine 訊號（如 Notch、ECM 接觸）特別關鍵。</p>
+</div>
+<div data-lang="en">
+<p>Core CCC requires <strong>"ligand in A, receptor in B, and A & B actually touch"</strong>. scRNA, lacking coordinates, drops the third requirement: CellPhoneDB and CellChat assume any cell in cluster A may interact with any cell in cluster B.</p>
+<p>In ST we can add physical distance — only credit LR interactions whose cells are <strong>spatially adjacent</strong>. This is especially crucial for paracrine / juxtacrine signaling (Notch, ECM contact).</p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="主流方法" data-en="METHODS">主流方法</h2>
+<h2 data-zh="二、空間感知 CCC 工具" data-en="II. Spatially-aware CCC tools">二、空間感知 CCC 工具</h2>
+<div class="card-grid cols-2">
+<div class="card"><h4>💬 CellChat v2 <span class="tag">spatial</span></h4>
+<div data-lang="zh"><p>2024 升級版內建 spatial mode：可同時用 cluster-level + spatial neighborhood，自動只算「物理鄰近 cluster pair」。LR database 較豐富、和 scRNA CellChat 完全相容、社群最大。</p></div>
+<div data-lang="en"><p>The 2024 upgrade ships a built-in spatial mode: combines cluster-level + spatial neighborhood, restricting LR inference to physically adjacent cluster pairs. Rich LR database, fully compatible with scRNA CellChat, largest community.</p></div>
+</div>
+<div class="card"><h4>🚛 COMMOT</h4>
+<div data-lang="zh"><p>用 <strong>collective optimal transport</strong> 一次性決定多 ligand vs 多 receptor 的「運輸方案」，同時納入空間距離與表達濃度。對 ligand/receptor 競爭情境特別好。</p></div>
+<div data-lang="en"><p>Uses <strong>collective optimal transport</strong> to jointly solve a "transport plan" for many ligands vs many receptors, integrating spatial distance and expression. Particularly strong under ligand/receptor competition.</p></div>
+</div>
+<div class="card"><h4>🌱 NicheNet <span class="tag amber">downstream</span></h4>
+<div data-lang="zh"><p>把 ligand → receptor → downstream signaling → target gene 的<strong>調控網路</strong>都拉進來。不直接用空間，但常跟 spatial CCC 配對：先用 CellChat/COMMOT 找 LR pair，再用 NicheNet 看下游。</p></div>
+<div data-lang="en"><p>Brings the full ligand → receptor → signaling → target gene <strong>regulatory network</strong>. Not spatial itself but commonly paired with spatial CCC: identify LR pairs with CellChat/COMMOT, then trace downstream with NicheNet.</p></div>
+</div>
+<div class="card"><h4>🧠 SpaTalk / DeepLinc</h4>
+<div data-lang="zh"><p>較新的 GNN-based 方法，用 graph attention 找潛在的 LR pair，準確度高但需要 GPU 與較大資料。</p></div>
+<div data-lang="en"><p>Newer GNN-based methods using graph attention to discover candidate LR pairs; accurate but require GPU and larger datasets.</p></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：距離閾值如何改變 LR 推論" data-en="Interactive: distance cutoff reshapes LR inference">互動：距離閾值如何改變 LR 推論</h2>
+<div data-lang="zh"><p>下圖：紅點 = 表達 ligand 的細胞（A 細胞群）；藍點 = 表達 receptor 的細胞（B 細胞群）。線條 = 推論的互動。當距離閾值 = ∞ 時，所有 A-B 對都連起來（像 scRNA）；縮小閾值 → 只剩物理上鄰近的對。</p></div>
+<div data-lang="en"><p>Red dots = ligand-expressing cells (A); blue dots = receptor-expressing cells (B); lines = inferred interactions. With distance cutoff = ∞, every A-B pair is linked (scRNA-like); shrinking the cutoff keeps only physically nearby pairs.</p></div>
+<div class="interactive-panel">
+<div class="slider-group"><label><span data-zh="距離閾值 (px)" data-en="Distance cutoff (px)">距離閾值</span> <span id="valDist">120</span></label><input type="range" id="sliderDist" min="20" max="600" value="120" step="10"></div>
+<div class="sim-stats"><span class="sim-stat info" id="lrCount">—</span></div>
+<div class="canvas-container"><canvas id="ccCanvas" width="700" height="320"></canvas></div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="決策" data-en="DECISION">決策</div>
+<h2 data-zh="三、選工具決策" data-en="III. Tool decision">三、選工具決策</h2>
+<div class="decision-tree">
+<div data-lang="zh">
+<div class="dt-node"><span class="dt-q">Q1:</span><div>已經跑過 scRNA CellChat 嗎？ <span class="dt-arrow">→ 是 →</span> 直接升級 <strong>CellChat v2 spatial</strong>。</div></div>
+<div class="dt-node"><span class="dt-q">Q2:</span><div>需要處理 <strong>ligand/receptor 競爭</strong>（一個 ligand 多個受體）？ <span class="dt-arrow">→ 是 →</span> <strong>COMMOT</strong>。</div></div>
+<div class="dt-node"><span class="dt-q">Q3:</span><div>想看 <strong>下游基因網路</strong>？ <span class="dt-arrow">→</span> 配 <strong>NicheNet</strong> 回追 target gene。</div></div>
+<div class="dt-node"><span class="dt-q">Q4:</span><div>Image-based 平台 (Xenium / MERFISH)？ <span class="dt-arrow">→</span> 因為單細胞解析度高，CellChat v2 spatial 與 COMMOT 都能直接用 cell-level 互動。</div></div>
+</div>
+<div data-lang="en">
+<div class="dt-node"><span class="dt-q">Q1:</span><div>Already used scRNA CellChat? <span class="dt-arrow">→ Yes →</span> just upgrade to <strong>CellChat v2 spatial</strong>.</div></div>
+<div class="dt-node"><span class="dt-q">Q2:</span><div>Need to model <strong>ligand/receptor competition</strong>? <span class="dt-arrow">→ Yes →</span> <strong>COMMOT</strong>.</div></div>
+<div class="dt-node"><span class="dt-q">Q3:</span><div>Want <strong>downstream regulatory networks</strong>? <span class="dt-arrow">→</span> pair with <strong>NicheNet</strong>.</div></div>
+<div class="dt-node"><span class="dt-q">Q4:</span><div>Image-based (Xenium / MERFISH)? <span class="dt-arrow">→</span> Single-cell resolution lets CellChat v2 spatial and COMMOT operate directly cell-by-cell.</div></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / CellChat v2</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / COMMOT</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># CellChat v2 spatial</span>
+<span class="func">library</span>(CellChat)
+cellchat &lt;- <span class="func">createCellChat</span>(object = vis, group.by = <span class="str">"celltype"</span>,
+                            datatype = <span class="str">"spatial"</span>,
+                            coordinates = vis@meta.data[, <span class="func">c</span>(<span class="str">"x"</span>,<span class="str">"y"</span>)])
+cellchat &lt;- <span class="func">setIdent</span>(cellchat, ident.use = <span class="str">"celltype"</span>)
+cellchat@DB &lt;- CellChatDB.human
+cellchat &lt;- <span class="func">subsetData</span>(cellchat) |&gt; <span class="func">identifyOverExpressedGenes</span>() |&gt; <span class="func">identifyOverExpressedInteractions</span>()
+cellchat &lt;- <span class="func">computeCommunProb</span>(cellchat, type = <span class="str">"truncatedMean"</span>,
+                                  distance.use = <span class="kw">TRUE</span>, scale.distance = <span class="num">0.01</span>)
+<span class="func">netVisual_circle</span>(cellchat@net$count); <span class="func">netVisual_aggregate</span>(cellchat, signaling = <span class="str">"VEGF"</span>)</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="kw">import</span> commot <span class="kw">as</span> ct
+<span class="comment"># 準備 LR DB</span>
+df_ligrec = ct.pp.ligand_receptor_database(species=<span class="str">"human"</span>, signaling_type=<span class="str">"Secreted Signaling"</span>)
+ct.tl.spatial_communication(adata, database_name=<span class="str">"cellchat"</span>,
+                             df_ligrec=df_ligrec, dis_thr=<span class="num">500</span>, heteromeric=<span class="kw">True</span>)
+ct.pl.plot_cell_communication(adata, summary=<span class="str">"sender"</span>, lr_pair=(<span class="str">"VEGFA"</span>,<span class="str">"KDR"</span>))</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">1. CellChat v2 spatial 與 v1 的核心差別？</p>
+<p data-lang="en">1. Key difference between CellChat v2 spatial and v1?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. v2 不再支援 scRNA</span><span data-lang="en">A. v2 no longer supports scRNA</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. v2 可以把空間距離納入 LR 推論</span><span data-lang="en">B. v2 incorporates spatial distance into LR inference</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. v2 不需要 ligand</span><span data-lang="en">C. v2 doesn't need ligands</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 兩者完全相同</span><span data-lang="en">D. They are identical</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">2. 想要研究「一個 ligand 同時被多個受體競爭」的情境，最適合？</p>
+<p data-lang="en">2. Best choice for "one ligand competed for by multiple receptors"?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. CellPhoneDB</span><span data-lang="en">A. CellPhoneDB</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. Seurat anchors</span><span data-lang="en">B. Seurat anchors</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. COMMOT (collective optimal transport)</span><span data-lang="en">C. COMMOT (collective optimal transport)</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. Moran's I</span><span data-lang="en">D. Moran's I</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">3. NicheNet 在 spatial 流程裡的典型角色？</p>
+<p data-lang="en">3. Typical role of NicheNet in a spatial pipeline?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 接在 spatial CCC 之後，回追 LR 下游 target gene 與訊號路徑</span><span data-lang="en">A. After spatial CCC, traces LR's downstream targets and signaling pathways</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 取代 deconvolution</span><span data-lang="en">B. Replaces deconvolution</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 取代 spatial domain identification</span><span data-lang="en">C. Replaces spatial domain identification</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 做 segmentation</span><span data-lang="en">D. Performs segmentation</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="sc-integration.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 9: scRNA Integration</span></a>
+<a href="niche.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 11: Niche</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+const W=700,H=320,CV=document.getElementById('ccCanvas'),CTX=CV.getContext('2d');
+const A=[],B=[]; // ligand A vs receptor B cells
+for(let i=0;i<28;i++){A.push({x:80+Math.random()*250,y:50+Math.random()*220});}
+for(let i=0;i<28;i++){B.push({x:380+Math.random()*250,y:50+Math.random()*220});}
+// also intermix some boundary B cells into A area to show "adjacent" cases
+for(let i=0;i<6;i++){B.push({x:280+Math.random()*120,y:60+Math.random()*200});}
+function draw(){
+  const cut = +document.getElementById('sliderDist').value;
+  document.getElementById('valDist').textContent = cut;
+  CTX.clearRect(0,0,W,H);
+  let pairs=0;
+  // edges
+  CTX.lineWidth=0.6;
+  A.forEach(a=>B.forEach(b=>{
+    const dx=a.x-b.x,dy=a.y-b.y,d=Math.sqrt(dx*dx+dy*dy);
+    if(d<=cut){pairs++; CTX.strokeStyle='rgba(232,160,73,0.45)'; CTX.beginPath(); CTX.moveTo(a.x,a.y); CTX.lineTo(b.x,b.y); CTX.stroke();}
+  }));
+  A.forEach(a=>{CTX.beginPath();CTX.arc(a.x,a.y,5.5,0,Math.PI*2);CTX.fillStyle='rgba(192,57,43,0.85)';CTX.fill();});
+  B.forEach(b=>{CTX.beginPath();CTX.arc(b.x,b.y,5.5,0,Math.PI*2);CTX.fillStyle='rgba(58,151,201,0.85)';CTX.fill();});
+  const L=I18n.get();
+  document.getElementById('lrCount').textContent = (L==='zh'?'推論互動數':'# inferred LR pairs') + ': ' + pairs;
+}
+document.getElementById('sliderDist').oninput=draw;
+document.addEventListener('langchange',draw);
+draw();
+
+const QF={
+  zh:{q1_y:'v2 引入 spatial mode，把距離與鄰域納入推論。',q1_n:'正確答案已標示。',q2_y:'COMMOT 用 OT 處理多受體競爭。',q2_n:'正確答案已標示。',q3_y:'NicheNet 把 LR → 下游 target 拉進來。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'v2 adds spatial mode, integrating distance / neighborhood.',q1_n:'Correct answer highlighted.',q2_y:'COMMOT uses OT to model receptor competition.',q2_n:'Correct answer highlighted.',q3_y:'NicheNet links LR → downstream targets.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
