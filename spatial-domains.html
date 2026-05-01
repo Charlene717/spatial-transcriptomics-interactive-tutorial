@@ -1,0 +1,213 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 6: Spatial Domains — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html" class="active">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 6 / 15</div>
+<h1 data-zh="空間區域辨識：把組織分成有生物意義的「區塊」" data-en="Spatial Domain Identification: partition tissue into meaningful regions">空間區域辨識：把組織分成有生物意義的區塊</h1>
+<p class="subtitle" data-lang="zh">Spatial domain ≠ scRNA cluster；它是「表達相似 + 空間連續」的雙重條件。</p>
+<p class="subtitle" data-lang="en">Spatial domain ≠ scRNA cluster — it requires both expression similarity and spatial contiguity.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="概念" data-en="CONCEPT">概念</div>
+<h2 data-zh="一、什麼叫「Spatial Domain」？" data-en="I. What is a 'Spatial Domain'?">一、什麼叫「Spatial Domain」？</h2>
+<div data-lang="zh">
+<p>Spatial domain 是 ST 才有的概念，指「<strong>表達 profile 相似</strong>且<strong>在組織上連續成片</strong>」的 spot 集合。在腦皮層上，這對應到 cortical layer L1–L6；在腎臟，對應到腎絲球與腎小管；在腫瘤，對應到核心 / 邊界 / 基質區。</p>
+<p>跟 scRNA cluster 的差別：scRNA 只看 expression similarity，「空間連續」是無從定義的。在 ST，<strong>同一個 cell type 在不同空間區域可能行使不同功能</strong>，所以用 cell type 取代 spatial domain 會丟失關鍵資訊。</p>
+</div>
+<div data-lang="en">
+<p>A spatial domain is an ST-specific concept: spots that are both <strong>expression-similar</strong> and <strong>spatially contiguous</strong>. In the cortex, domains map to cortical layers L1–L6; in kidney, to glomeruli vs tubules; in tumor, to core / margin / stroma.</p>
+<p>How does this differ from scRNA clusters? scRNA only knows expression similarity; "spatial contiguity" is undefined. In ST, the <strong>same cell type can perform different roles in different spatial regions</strong> — replacing domains with cell types loses key information.</p>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="主流方法" data-en="METHODS">主流方法</h2>
+<h2 data-zh="二、五大主流演算法" data-en="II. Five mainstream algorithms">二、五大主流演算法</h2>
+<table class="comp-table">
+<thead><tr><th data-zh="工具" data-en="Tool">工具</th><th data-zh="原理" data-en="Idea">原理</th><th data-zh="語言" data-en="Lang">語言</th><th data-zh="優缺" data-en="Notes">優缺</th></tr></thead>
+<tbody>
+<tr><td><strong>BayesSpace</strong></td><td data-lang="zh">Bayesian + Markov Random Field 強制空間連續</td><td>R</td><td data-lang="zh">在 Visium、原始 ST 上表現穩定；Markov 假設下會「太平滑」</td><td data-lang="en">Bayesian + Markov Random Field for spatial smoothness</td><td data-lang="en">Robust on Visium / original ST; can over-smooth</td></tr>
+<tr><td><strong>SpaGCN</strong></td><td data-lang="zh">GCN + 組織影像顏色一起當特徵</td><td>Python</td><td data-lang="zh">能整合 H&E；Stereo-seq 表現很好</td><td data-lang="en">GCN + H&E color as features</td><td data-lang="en">Integrates H&E; strong on Stereo-seq</td></tr>
+<tr><td><strong>STAGATE</strong></td><td data-lang="zh">Adaptive graph attention auto-encoder</td><td>Python</td><td data-lang="zh">在 Visium 表現次於 GraphST；對 STARmap 也較友善</td><td data-lang="en">Adaptive graph-attention autoencoder</td><td data-lang="en">2nd on Visium; friendlier on STARmap</td></tr>
+<tr><td><strong>GraphST</strong></td><td data-lang="zh">Self-supervised contrastive GNN</td><td>Python</td><td data-lang="zh"><strong>2025 benchmark Visium 第一名</strong>（mean ARI 0.55）</td><td data-lang="en">Self-supervised contrastive GNN</td><td data-lang="en"><strong>Top method on Visium</strong> in 2025 benchmark (mean ARI 0.55)</td></tr>
+<tr><td><strong>BANKSY</strong></td><td data-lang="zh">把 self / nbr-mean / nbr-azimuthal 串接做特徵</td><td>R / Python</td><td data-lang="zh">超快、無需 GPU、Seurat v5 內建</td><td data-lang="en">Concatenates self / nbr-mean / nbr-AGF features</td><td data-lang="en">Very fast, no GPU needed, built into Seurat v5</td></tr>
+</tbody></table>
+<div class="callout warn"><span class="callout-icon">⚠️</span><div>
+<span data-lang="zh"><strong>重要結論：</strong>2025 年 NAR benchmark 顯示沒有任何方法在所有平台都最佳。Visium 偏 GraphST/BayesSpace；Stereo-seq 偏 SpaGCN/Louvain；Slide-seqV2 / STARmap 上所有方法表現都顯著下降，需要更謹慎。</span>
+<span data-lang="en"><strong>Key takeaway:</strong> the 2025 NAR benchmark shows no method dominates across platforms. GraphST/BayesSpace lead on Visium; SpaGCN/Louvain lead on Stereo-seq; all methods drop noticeably on Slide-seqV2 / STARmap — handle with care.</span>
+</div></div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：smoothing 強度與 cluster 數" data-en="Interactive: smoothing strength vs # clusters">互動：smoothing 強度與 cluster 數</h2>
+<div data-lang="zh"><p>下方是模擬皮層 5 層結構。左側為 raw expression（含噪），中間是「弱平滑」(似 Leiden)，右側是「強平滑」(似 BayesSpace)。觀察邊界平滑度與 cluster 數的取捨。</p></div>
+<div data-lang="en"><p>Below: simulated 5-layer cortex. Left = raw expression (noisy); middle = weak smoothing (Leiden-like); right = strong smoothing (BayesSpace-like). Watch the trade-off between boundary sharpness and cluster count.</p></div>
+<div class="interactive-panel">
+<div class="slider-group"><label><span data-zh="平滑強度" data-en="Smoothing strength">平滑強度</span> <span id="valSmo">0.3</span></label><input type="range" id="sliderSmo" min="0" max="0.95" value="0.3" step="0.05"></div>
+<div class="slider-group"><label><span data-zh="cluster 數 (預期)" data-en="Cluster count (target)">cluster 數</span> <span id="valK">5</span></label><input type="range" id="sliderK" min="2" max="8" value="5" step="1"></div>
+<div class="canvas-container"><canvas id="domCanvas" width="700" height="320"></canvas></div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="決策" data-en="DECISION">決策</div>
+<h2 data-zh="三、選工具決策樹" data-en="III. Tool selection decision tree">三、選工具決策樹</h2>
+<div class="decision-tree">
+<h4>🌳 <span data-zh="先看你用哪個平台" data-en="Look at platform first">先看你用哪個平台</span></h4>
+<div data-lang="zh">
+<div class="dt-node"><span class="dt-q">Visium:</span><div>首選 <strong>GraphST</strong> 或 <strong>BayesSpace</strong>；要極快可用 BANKSY。</div></div>
+<div class="dt-node"><span class="dt-q">Visium HD:</span><div>BANKSY（Seurat v5 整合佳）+ Leiden；BayesSpace 對 HD 過大不友善。</div></div>
+<div class="dt-node"><span class="dt-q">Stereo-seq:</span><div><strong>SpaGCN</strong>（影像融合）或 GraphST/Louvain。</div></div>
+<div class="dt-node"><span class="dt-q">Image-based</span> (Xenium/MERFISH/CosMx):<div>先 segmentation → cluster 細胞 → 再用 niche/CN 分析（見 <a href="niche.html">Step 11</a>），不一定走傳統 spatial domain。</div></div>
+<div class="dt-node"><span class="dt-q">Slide-seq:</span><div>最難；建議先用 BANKSY 較大 λ 平滑；報告要附 ARI 範圍。</div></div>
+</div>
+<div data-lang="en">
+<div class="dt-node"><span class="dt-q">Visium:</span><div>Default <strong>GraphST</strong> or <strong>BayesSpace</strong>; pick BANKSY when speed matters.</div></div>
+<div class="dt-node"><span class="dt-q">Visium HD:</span><div>BANKSY (Seurat v5 integration) + Leiden; BayesSpace struggles at HD scale.</div></div>
+<div class="dt-node"><span class="dt-q">Stereo-seq:</span><div><strong>SpaGCN</strong> (image fusion) or GraphST/Louvain.</div></div>
+<div class="dt-node"><span class="dt-q">Image-based</span> (Xenium/MERFISH/CosMx):<div>Segment first → cluster cells → niche/CN analysis (see <a href="niche.html">Step 11</a>) instead of classic spatial domains.</div></div>
+<div class="dt-node"><span class="dt-q">Slide-seq:</span><div>Hardest; try BANKSY with larger λ; report ARI ranges honestly.</div></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / BayesSpace + BANKSY</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / GraphST + SpaGCN</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># BayesSpace</span>
+<span class="func">library</span>(BayesSpace)
+spe &lt;- <span class="func">spatialPreprocess</span>(spe, n.PCs = <span class="num">15</span>, n.HVGs = <span class="num">2000</span>)
+spe &lt;- <span class="func">qTune</span>(spe, qs = <span class="num">3</span>:<span class="num">10</span>)  <span class="comment"># 選最佳 cluster 數</span>
+spe &lt;- <span class="func">spatialCluster</span>(spe, q = <span class="num">7</span>, nrep = <span class="num">10000</span>)
+<span class="func">clusterPlot</span>(spe)
+
+<span class="comment"># BANKSY (Seurat v5 內建)</span>
+vis &lt;- <span class="func">RunBanksy</span>(vis, lambda = <span class="num">0.2</span>, k_geom = <span class="num">15</span>, dimx = <span class="str">"x"</span>, dimy = <span class="str">"y"</span>)
+vis &lt;- <span class="func">RunPCA</span>(vis, assay = <span class="str">"BANKSY"</span>) |&gt; <span class="func">FindNeighbors</span>() |&gt; <span class="func">FindClusters</span>(resolution = <span class="num">0.5</span>)
+<span class="func">SpatialDimPlot</span>(vis)</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="comment"># GraphST</span>
+<span class="kw">from</span> GraphST <span class="kw">import</span> GraphST
+<span class="kw">from</span> GraphST.utils <span class="kw">import</span> clustering
+model = GraphST(adata, device=<span class="str">"cuda"</span>)
+adata = model.train()
+clustering(adata, n_clusters=<span class="num">7</span>, method=<span class="str">"mclust"</span>)
+sq.pl.spatial_scatter(adata, color=[<span class="str">"domain"</span>])
+
+<span class="comment"># SpaGCN</span>
+<span class="kw">import</span> SpaGCN <span class="kw">as</span> spg
+adj = spg.calculate_adj_matrix(x=adata.obs[<span class="str">"x"</span>], y=adata.obs[<span class="str">"y"</span>],
+                               x_pixel=adata.obs[<span class="str">"x_pix"</span>], y_pixel=adata.obs[<span class="str">"y_pix"</span>],
+                               image=img, beta=<span class="num">49</span>, alpha=<span class="num">1</span>, histology=<span class="kw">True</span>)
+clf = spg.SpaGCN()
+clf.set_l(<span class="num">0.5</span>); clf.train(adata, adj, n_clusters=<span class="num">7</span>)</pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">1. 為什麼 spatial domain 不能用 scRNA cluster 取代？</p>
+<p data-lang="en">1. Why can't spatial domains simply be replaced by scRNA clusters?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 因為 scRNA 沒有基因</span><span data-lang="en">A. scRNA has no genes</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 因為 cluster 數不能控制</span><span data-lang="en">B. Cluster count can't be controlled</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 因為相同細胞類型在不同空間區域可能有不同功能</span><span data-lang="en">C. Same cell type can play different roles in different regions</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 因為 ST 沒有 cluster</span><span data-lang="en">D. ST has no clusters</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">2. 2025 NAR benchmark 中，Visium 上整體表現最佳的是？</p>
+<p data-lang="en">2. Best-performing method on Visium in the 2025 NAR benchmark?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. GraphST</span><span data-lang="en">A. GraphST</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. K-means</span><span data-lang="en">B. K-means</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. PCA</span><span data-lang="en">C. PCA</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. tSNE</span><span data-lang="en">D. tSNE</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">3. SpaGCN 跟其他方法最特別的不同是？</p>
+<p data-lang="en">3. What is unique about SpaGCN?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 它不是 GNN</span><span data-lang="en">A. It is not a GNN</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 它把 H&E 影像顏色當成節點特徵</span><span data-lang="en">B. It uses H&E color as node features</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 它只能用在 Stereo-seq</span><span data-lang="en">C. It only works on Stereo-seq</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 它只用 R</span><span data-lang="en">D. It only runs in R</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="dim-reduction.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 5: DimRed</span></a>
+<a href="svgs.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 7: SVGs</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+// Domain sim: cortical-layer-like simulated data
+const W=700,H=320,CV=document.getElementById('domCanvas'),CTX=CV.getContext('2d');
+const palette=['#5b3e96','#e8a049','#3a9a7c','#c75485','#3a7eb3','#9c7a4a','#7d4ec7','#d04848'];
+const spots=[];
+const cols=46,rows=18;
+for(let i=0;i<cols;i++) for(let j=0;j<rows;j++){
+  const x=15+i*((W-30)/cols)+(j%2?7:0), y=15+j*((H-30)/rows);
+  // 5-layer cortex: layer determined by y bands with curved boundaries
+  const yShift = 18*Math.sin(x/35);
+  const t = (y + yShift) / H;  // 0..1
+  let gt = Math.min(4, Math.floor(t*5));
+  // add noise
+  if(Math.random()<0.18) gt = (gt + (Math.random()<0.5?-1:1) + 5) % 5;
+  spots.push({x,y,gt,cl:gt});
+}
+function neighborMode(s){
+  const counts=new Array(8).fill(0);
+  spots.forEach(t=>{if(t===s)return;const dx=t.x-s.x,dy=t.y-s.y,d2=dx*dx+dy*dy;if(d2<700){counts[t.cl]++;}});
+  let bi=0,bv=-1;counts.forEach((v,i)=>{if(v>bv){bv=v;bi=i;}});
+  return bi;
+}
+function draw(){
+  const smo = +document.getElementById('sliderSmo').value;
+  const k = +document.getElementById('sliderK').value;
+  document.getElementById('valSmo').textContent = smo.toFixed(2);
+  document.getElementById('valK').textContent = k;
+  // re-init from gt; collapse extra layers
+  spots.forEach(s=>{ s.cl = Math.min(s.gt, k-1); });
+  // smoothing iterations proportional to slider
+  const iters = Math.round(smo*8);
+  for(let it=0;it<iters;it++){
+    const newCl = spots.map(s=>neighborMode(s));
+    spots.forEach((s,i)=>s.cl=newCl[i]);
+  }
+  CTX.clearRect(0,0,W,H);
+  spots.forEach(s=>{
+    CTX.beginPath(); CTX.arc(s.x,s.y,4.4,0,Math.PI*2);
+    CTX.fillStyle = palette[s.cl % palette.length];
+    CTX.globalAlpha=0.92; CTX.fill(); CTX.globalAlpha=1;
+  });
+}
+document.getElementById('sliderSmo').oninput=draw;
+document.getElementById('sliderK').oninput=draw;
+draw();
+
+// Quiz
+const QF={
+  zh:{q1_y:'相同 cell type 在不同 niche 可有不同功能。',q1_n:'正確答案已標示。',q2_y:'GraphST 在 Visium 上 mean ARI 0.55 居首。',q2_n:'正確答案已標示。',q3_y:'SpaGCN 整合 H&E 顏色當特徵是其特色。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'Same cell type can play different roles in different niches.',q1_n:'Correct answer highlighted.',q2_y:'GraphST tops Visium with mean ARI 0.55.',q2_n:'Correct answer highlighted.',q3_y:'Using H&E color as node features is SpaGCN\'s signature.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
