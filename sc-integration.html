@@ -1,0 +1,137 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 9: scRNA Integration — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html" class="active">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 9 / 15</div>
+<h1 data-zh="與 scRNA-seq 整合：把單細胞分類映回空間" data-en="scRNA Integration: map sc cell types back into space">與 scRNA-seq 整合：把單細胞分類映回空間</h1>
+<p class="subtitle" data-lang="zh">deconvolution 給比例，integration 給「每一顆 sc 細胞最有可能在組織哪個位置」。</p>
+<p class="subtitle" data-lang="en">Deconvolution gives proportions; integration tells where each sc cell most likely sits in the tissue.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="任務分類" data-en="TASKS">任務分類</div>
+<h2 data-zh="一、整合的三種任務" data-en="I. Three integration tasks">一、整合的三種任務</h2>
+<div class="card-grid cols-3">
+<div class="card"><div class="card-icon">🏷️</div><h4 data-zh="Label transfer" data-en="Label transfer">Label transfer</h4>
+<div data-lang="zh"><p>把 scRNA 的 cell-type 標籤投射到 spot（per-spot top-1 / weighted）。Seurat <code>FindTransferAnchors</code> 是經典方案。</p></div>
+<div data-lang="en"><p>Project scRNA cell-type labels to spots (per-spot top-1 / weighted). Seurat <code>FindTransferAnchors</code> is the classic approach.</p></div>
+</div>
+<div class="card"><div class="card-icon">🗺️</div><h4 data-zh="Cell mapping" data-en="Cell mapping">Cell mapping</h4>
+<div data-lang="zh"><p><strong>Tangram</strong>：用 deep learning 學一個機率矩陣，每顆 sc 細胞對應到某 voxel/spot 的機率。同時可做 gene imputation。</p></div>
+<div data-lang="en"><p><strong>Tangram</strong>: deep learning estimates a probability matrix mapping each sc cell to a voxel/spot. Also imputes missing genes.</p></div>
+</div>
+<div class="card"><div class="card-icon">🎯</div><h4 data-zh="High-resolution placement" data-en="High-resolution placement">High-res placement</h4>
+<div data-lang="zh"><p><strong>CytoSPACE</strong>：把 sc cell 一對一映射到 ST spot，達到單細胞解析的空間圖；對 noise tolerance 強。</p></div>
+<div data-lang="en"><p><strong>CytoSPACE</strong>: one-to-one assignment of sc cells to ST spots — yields a single-cell spatial map; strong noise tolerance.</p></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="方法清單" data-en="TOOLS">方法清單</div>
+<h2 data-zh="二、主流工具" data-en="II. Main tools">二、主流工具</h2>
+<table class="comp-table">
+<thead><tr><th data-zh="工具" data-en="Tool">工具</th><th data-zh="任務" data-en="Task">任務</th><th data-zh="特色" data-en="Notes">特色</th></tr></thead>
+<tbody>
+<tr><td><strong>Seurat anchors</strong></td><td>label transfer</td><td data-lang="zh">與 scRNA-seq 工作流無縫銜接、社群最大</td><td data-lang="en">Seamless with scRNA workflow, largest community</td></tr>
+<tr><td><strong>Tangram</strong></td><td>cell mapping + imputation</td><td data-lang="zh">PyTorch、可同時擴充基因覆蓋；MERFISH/STARmap/Visium 通用</td><td data-lang="en">PyTorch, also imputes missing genes; works on MERFISH/STARmap/Visium</td></tr>
+<tr><td><strong>CytoSPACE</strong></td><td>1-to-1 placement</td><td data-lang="zh">2023 Nat Biotech、優於前期方法；對 noise robust</td><td data-lang="en">2023 Nat Biotech; outperforms prior methods; noise-robust</td></tr>
+<tr><td><strong>SpaGE</strong></td><td>gene imputation</td><td data-lang="zh">針對 image-based panel 補齊未被測到的基因</td><td data-lang="en">Imputes off-panel genes for image-based data</td></tr>
+<tr><td><strong>STEM</strong></td><td>transfer learning</td><td data-lang="zh">2024 Comm Bio；用 deep transfer learning 同時做 mapping + 標籤遷移</td><td data-lang="en">2024 Comm Bio; deep transfer learning for mapping + label transfer</td></tr>
+</tbody></table>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="工作流程" data-en="WORKFLOW">工作流程</div>
+<h2 data-zh="三、整合的標準工作流程" data-en="III. Standard integration workflow">三、整合的標準工作流程</h2>
+<div class="workflow">
+<div class="workflow-step" data-step="1"><h4 data-zh="清乾淨 sc reference" data-en="Curate the sc reference">清乾淨 sc reference</h4><p data-lang="zh">用對的組織、用對的分群粒度。太細的 cluster 可能跟 ST 解析度不匹配。</p><p data-lang="en">Use the right tissue and the right granularity. Too-fine clusters may not match ST resolution.</p></div>
+<div class="workflow-step" data-step="2"><h4 data-zh="挑選共用基因 / training markers" data-en="Pick shared genes / training markers">挑選共用基因</h4><p data-lang="zh">Tangram 建議用每個 cell-type 各 ~100 個 marker（共 ~1k 基因）做 training set。</p><p data-lang="en">Tangram recommends ~100 markers × cell-type (~1 k genes) for training.</p></div>
+<div class="workflow-step" data-step="3"><h4 data-zh="訓練 / 對位" data-en="Train / align">訓練 / 對位</h4><p data-lang="zh">Tangram constraint mode（每個 spot 細胞數估值帶入），有助於 Visium。CytoSPACE 直接用 ILP optimizer。</p><p data-lang="en">For Tangram, "constrained" mode (with per-spot cell count) helps on Visium. CytoSPACE uses an ILP optimizer.</p></div>
+<div class="workflow-step" data-step="4"><h4 data-zh="驗證" data-en="Validate">驗證</h4><p data-lang="zh">把 imputed marker 跟 ground-truth marker 比較；以及 spatial domain 對應細胞類型是否符合解剖學。</p><p data-lang="en">Compare imputed markers with ground-truth; check whether spatial domains correspond to expected cell types per anatomy.</p></div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / Seurat anchors</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / Tangram + CytoSPACE</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># Seurat label transfer</span>
+anchors &lt;- <span class="func">FindTransferAnchors</span>(reference = sc, query = vis, normalization.method = <span class="str">"SCT"</span>)
+preds &lt;- <span class="func">TransferData</span>(anchorset = anchors, refdata = sc$celltype,
+                       prediction.assay = <span class="kw">TRUE</span>, weight.reduction = vis[[<span class="str">"pca"</span>]])
+vis[[<span class="str">"predictions"</span>]] &lt;- preds
+<span class="func">SpatialFeaturePlot</span>(vis, features = <span class="func">c</span>(<span class="str">"T_cell"</span>, <span class="str">"B_cell"</span>))</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="kw">import</span> tangram <span class="kw">as</span> tg
+<span class="comment"># Tangram cell mapping (Visium)</span>
+markers = sc.tl.rank_genes_groups_df(adata_sc, group=<span class="kw">None</span>).head(<span class="num">1500</span>)[<span class="str">"names"</span>].tolist()
+tg.pp_adatas(adata_sc, adata_st, genes=markers)
+ad_map = tg.map_cells_to_space(adata_sc, adata_st, mode=<span class="str">"constrained"</span>,
+                                density_prior=<span class="str">"rna_count_based"</span>, num_epochs=<span class="num">500</span>)
+ad_proj = tg.project_genes(ad_map, adata_sc)  <span class="comment"># 補齊基因</span>
+
+<span class="comment"># CytoSPACE</span>
+<span class="kw">import</span> cytospace
+out = cytospace.run(scRNA = sc_counts, ST = st_counts,
+                     scLabels = sc_meta[<span class="str">"celltype"</span>])  <span class="comment"># one-to-one assignment</span></pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">1. 下列哪個工具最適合「想要單細胞解析的空間圖」？</p>
+<p data-lang="en">1. Which tool best fits "I want a single-cell-resolution spatial map"?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. RCTD</span><span data-lang="en">A. RCTD</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. cell2location</span><span data-lang="en">B. cell2location</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. CytoSPACE</span><span data-lang="en">C. CytoSPACE</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. Moran's I</span><span data-lang="en">D. Moran's I</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">2. Tangram 除了 cell mapping 還能做？</p>
+<p data-lang="en">2. Beyond cell mapping, Tangram also performs?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 基因 imputation（補齊未被測到的基因）</span><span data-lang="en">A. Gene imputation (filling in untested genes)</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 自動 segmentation</span><span data-lang="en">B. Automatic segmentation</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 估算 ligand-receptor</span><span data-lang="en">C. Ligand-receptor inference</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 移除 batch effect</span><span data-lang="en">D. Removes batch effects</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">3. Tangram 訓練基因怎麼挑最有效率？</p>
+<p data-lang="en">3. How to pick training genes for Tangram efficiently?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 全部基因都丟進去</span><span data-lang="en">A. Pass in all genes</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 每個細胞類型各取 top markers (共 ~1k)</span><span data-lang="en">B. Top markers per cell type (~1k total)</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 隨機取 100 個</span><span data-lang="en">C. Random 100 genes</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 只用 housekeeping 基因</span><span data-lang="en">D. Only housekeeping genes</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="deconvolution.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 8: Deconvolution</span></a>
+<a href="cell-communication.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 10: Cell Communication</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+const QF={
+  zh:{q1_y:'CytoSPACE 做 1-to-1 assignment，達單細胞空間圖。',q1_n:'正確答案已標示。',q2_y:'project_genes 可同時做 imputation。',q2_n:'正確答案已標示。',q3_y:'每個 cell-type 各取 top markers 是 Tangram 推薦做法。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'CytoSPACE does 1-to-1 assignment for single-cell spatial maps.',q1_n:'Correct answer highlighted.',q2_y:'project_genes also performs imputation.',q2_n:'Correct answer highlighted.',q3_y:'Top markers per cell type is the Tangram recommendation.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
