@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Spatial Transcriptomics Interactive Tutorial</title>
+<meta name="description" content="Complete bilingual Spatial Transcriptomics interactive tutorial — Visium, Visium HD, Xenium, MERFISH, CosMx, Slide-seq, Stereo-seq.">
+<link rel="stylesheet" href="styles.css"></head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li>
+    <li><a href="platforms.html">Platforms</a></li>
+    <li><a href="qc.html">QC</a></li>
+    <li><a href="normalization.html">Norm.</a></li>
+    <li><a href="dim-reduction.html">DimRed</a></li>
+    <li><a href="spatial-domains.html">Domains</a></li>
+    <li><a href="svgs.html">SVGs</a></li>
+    <li><a href="deconvolution.html">Decon</a></li>
+    <li><a href="sc-integration.html">scInteg</a></li>
+    <li><a href="cell-communication.html">CCC</a></li>
+    <li><a href="niche.html">Niche</a></li>
+    <li><a href="trajectory.html">Traj.</a></li>
+    <li><a href="multi-sample.html">Multi</a></li>
+    <li><a href="segmentation.html">Seg</a></li>
+    <li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<header class="hub-hero"><div style="position:relative;z-index:1;">
+<h1 data-zh="Spatial Transcriptomics 互動式教學" data-en="Spatial Transcriptomics Interactive Tutorial">Spatial Transcriptomics 互動式教學</h1>
+<p data-lang="zh">把基因表達放回組織原本的座標——15 個步驟帶你掌握空間轉錄組分析，從 Visium 到 Xenium、從 spot 到 subcellular，全程互動模擬與雙語程式碼。</p>
+<p data-lang="en">Put gene expression back into its tissue context — 15 chapters covering spatial transcriptomics from Visium to Xenium, from spot to subcellular resolution, with interactive simulations and bilingual code.</p>
+</div></header>
+
+<h2 class="hub-section-title"><span>01</span> <span data-zh="基礎概念" data-en="Foundations">基礎概念</span></h2>
+<div class="hub-steps-grid">
+  <a href="overview.html" class="hub-card"><div class="hub-emoji">🌐</div><span class="step-num">Step 1</span><h3 data-zh="總覽 (Overview)" data-en="Overview">總覽</h3><p data-lang="zh">什麼是空間轉錄組學？為什麼需要把基因表達跟組織座標一起看？scRNA-seq 與 ST 的核心差異。</p><p data-lang="en">What is spatial transcriptomics? Why look at expression with tissue coordinates? Key differences from scRNA-seq.</p></a>
+  <a href="platforms.html" class="hub-card"><div class="hub-emoji">🔬</div><span class="step-num">Step 2</span><h3 data-zh="平台比較" data-en="Platform Comparison">平台比較</h3><p data-lang="zh">Spot-based (Visium / Visium HD / Slide-seq / Stereo-seq) vs Image-based (Xenium / MERFISH / CosMx / STARmap)。</p><p data-lang="en">Spot-based (Visium / Visium HD / Slide-seq / Stereo-seq) vs Image-based (Xenium / MERFISH / CosMx / STARmap).</p></a>
+</div>
+
+<h2 class="hub-section-title"><span>02</span> <span data-zh="核心分析流程" data-en="Core Analysis Pipeline">核心分析流程</span></h2>
+<div class="hub-steps-grid">
+  <a href="qc.html" class="hub-card"><div class="hub-emoji">🧪</div><span class="step-num">Step 3</span><h3 data-zh="品質管控 (QC)" data-en="Quality Control (QC)">品質管控</h3><p data-lang="zh">spot/cell 層級指標、組織覆蓋、SpotSweeper 局部離群偵測——空間 QC 跟單細胞不一樣。</p><p data-lang="en">Spot/cell metrics, tissue coverage, SpotSweeper local outlier detection — spatial QC differs from scRNA-seq.</p></a>
+  <a href="normalization.html" class="hub-card"><div class="hub-emoji">⚖️</div><span class="step-num">Step 4</span><h3 data-zh="標準化" data-en="Normalization">標準化</h3><p data-lang="zh">LogNormalize、SCTransform、scran size factors——spot 含多細胞時應如何選擇？</p><p data-lang="en">LogNormalize, SCTransform, scran size factors — how to choose when each spot contains multiple cells?</p></a>
+  <a href="dim-reduction.html" class="hub-card"><div class="hub-emoji">📉</div><span class="step-num">Step 5</span><h3 data-zh="降維與特徵選擇" data-en="Dimensionality Reduction">降維與特徵</h3><p data-lang="zh">空間 HVG 篩選、PCA、UMAP，並認識 BANKSY 把空間鄰域納入嵌入。</p><p data-lang="en">Spatial HVG selection, PCA, UMAP — and BANKSY embedding that incorporates spatial neighborhoods.</p></a>
+  <a href="spatial-domains.html" class="hub-card"><div class="hub-emoji">🧩</div><span class="step-num">Step 6</span><h3 data-zh="空間區域辨識" data-en="Spatial Domains">空間區域辨識</h3><p data-lang="zh">BayesSpace、SpaGCN、STAGATE、GraphST、BANKSY——把組織分成有生物意義的空間區塊。</p><p data-lang="en">BayesSpace, SpaGCN, STAGATE, GraphST, BANKSY — partition tissue into biologically meaningful regions.</p></a>
+  <a href="svgs.html" class="hub-card"><div class="hub-emoji">✨</div><span class="step-num">Step 7</span><h3 data-zh="空間變異基因 (SVGs)" data-en="Spatially Variable Genes">空間變異基因</h3><p data-lang="zh">Moran's I、SpatialDE、SPARK-X、nnSVG——找出表達跟空間位置真正相關的基因。</p><p data-lang="en">Moran's I, SpatialDE, SPARK-X, nnSVG — find genes whose expression truly depends on location.</p></a>
+  <a href="deconvolution.html" class="hub-card"><div class="hub-emoji">🧬</div><span class="step-num">Step 8</span><h3 data-zh="細胞類型解卷積" data-en="Cell Type Deconvolution">細胞類型解卷積</h3><p data-lang="zh">cell2location、RCTD、CARD、SPOTlight、Tangram——估算每個 spot 內的細胞類型組成。</p><p data-lang="en">cell2location, RCTD, CARD, SPOTlight, Tangram — estimate cell type composition per spot.</p></a>
+  <a href="sc-integration.html" class="hub-card"><div class="hub-emoji">🔗</div><span class="step-num">Step 9</span><h3 data-zh="與 scRNA-seq 整合" data-en="scRNA-seq Integration">與 scRNA-seq 整合</h3><p data-lang="zh">Tangram、CytoSPACE、Seurat label transfer——將 scRNA-seq 細胞類型映射回空間。</p><p data-lang="en">Tangram, CytoSPACE, Seurat label transfer — map scRNA-seq cell types back into space.</p></a>
+</div>
+
+<h2 class="hub-section-title"><span>03</span> <span data-zh="進階分析主題" data-en="Advanced Topics">進階分析主題</span></h2>
+<div class="hub-steps-grid">
+  <a href="cell-communication.html" class="hub-card"><div class="hub-emoji">💬</div><span class="step-num">Advanced</span><h3 data-zh="空間細胞通訊" data-en="Spatial Cell Communication">空間細胞通訊</h3><p data-lang="zh">CellChat v2 spatial、COMMOT、NicheNet——把距離納入 ligand-receptor 推論。</p><p data-lang="en">CellChat v2 spatial, COMMOT, NicheNet — incorporate distance into ligand-receptor inference.</p></a>
+  <a href="niche.html" class="hub-card"><div class="hub-emoji">🏘️</div><span class="step-num">Advanced</span><h3 data-zh="生態棲位 (Niche)" data-en="Niche & Microenvironment">生態棲位分析</h3><p data-lang="zh">CellCharter、NicheCompass、scNiche、Squidpy neighborhood enrichment——量化組織微環境。</p><p data-lang="en">CellCharter, NicheCompass, scNiche, Squidpy neighborhood enrichment — quantify tissue microenvironments.</p></a>
+  <a href="trajectory.html" class="hub-card"><div class="hub-emoji">🛤️</div><span class="step-num">Advanced</span><h3 data-zh="空間軌跡分析" data-en="Spatial Trajectory">空間軌跡分析</h3><p data-lang="zh">ONTraC niche trajectory、SpaceFlow、stLearn——把 pseudotime 推進空間維度。</p><p data-lang="en">ONTraC niche trajectory, SpaceFlow, stLearn — extend pseudotime into the spatial dimension.</p></a>
+  <a href="multi-sample.html" class="hub-card"><div class="hub-emoji">🧱</div><span class="step-num">Advanced</span><h3 data-zh="多樣本整合與 3D" data-en="Multi-sample Integration & 3D">多樣本整合 / 3D</h3><p data-lang="zh">Harmony、PASTE、STAligner、STAIR——多切片整合與 3D 重建。</p><p data-lang="en">Harmony, PASTE, STAligner, STAIR — multi-slice integration and 3D reconstruction.</p></a>
+  <a href="segmentation.html" class="hub-card"><div class="hub-emoji">✂️</div><span class="step-num">Advanced</span><h3 data-zh="細胞切割" data-en="Cell Segmentation">細胞切割</h3><p data-lang="zh">Cellpose、Baysor、proseg——image-based 平台 (Xenium / MERFISH / CosMx) 的核心前處理。</p><p data-lang="en">Cellpose, Baysor, proseg — critical preprocessing for image-based (Xenium/MERFISH/CosMx) platforms.</p></a>
+  <a href="visium-hd-histology.html" class="hub-card"><div class="hub-emoji">🖼️</div><span class="step-num">Advanced</span><h3 data-zh="Visium HD & 病理影像整合" data-en="Visium HD & Histology">Visium HD / 病理整合</h3><p data-lang="zh">2/8/16 µm bin 選擇、HEST 資料庫、視覺 foundation model 把組織形態與表達一起學。</p><p data-lang="en">2/8/16 µm bin selection, HEST dataset, vision foundation models that learn morphology + expression jointly.</p></a>
+</div>
+<div style="height:60px"></div>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+</body></html>
