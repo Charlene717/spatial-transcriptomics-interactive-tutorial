@@ -1,0 +1,182 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Step 12: Spatial Trajectory — Spatial Transcriptomics Tutorial</title>
+<link rel="stylesheet" href="styles.css">
+</head><body>
+<nav class="top-nav"><div class="top-nav-inner">
+  <a href="index.html" class="top-nav-brand"><span>🗺️</span> <span data-zh="ST 教學" data-en="ST Tutorial">ST 教學</span></a>
+  <ul class="top-nav-links">
+    <li><a href="overview.html">Overview</a></li><li><a href="platforms.html">Platforms</a></li><li><a href="qc.html">QC</a></li><li><a href="normalization.html">Norm.</a></li><li><a href="dim-reduction.html">DimRed</a></li><li><a href="spatial-domains.html">Domains</a></li><li><a href="svgs.html">SVGs</a></li><li><a href="deconvolution.html">Decon</a></li><li><a href="sc-integration.html">scInteg</a></li><li><a href="cell-communication.html">CCC</a></li><li><a href="niche.html">Niche</a></li><li><a href="trajectory.html" class="active">Traj.</a></li><li><a href="multi-sample.html">Multi</a></li><li><a href="segmentation.html">Seg</a></li><li><a href="visium-hd-histology.html">HD/Hist</a></li>
+  </ul>
+</div></nav>
+<div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+<header class="page-hero"><div class="step-badge">STEP 12 / 15</div>
+<h1 data-zh="空間軌跡：把 pseudotime 推進空間維度" data-en="Spatial Trajectory: extend pseudotime into space">空間軌跡：把 pseudotime 推進空間維度</h1>
+<p class="subtitle" data-lang="zh">傷口邊緣的細胞「沿著空間漸變狀態」——這是 trajectory 在 ST 上的真實含義。</p>
+<p class="subtitle" data-lang="en">Cells near a wound margin form continuous state gradients in space — that is what trajectory means in ST.</p>
+</header>
+<main class="content-wrap">
+
+<section class="section">
+<div class="section-label" data-zh="概念" data-en="CONCEPT">概念</div>
+<h2 data-zh="一、為什麼 ST 的 trajectory 不只是 scRNA pseudotime？" data-en="I. Why ST trajectory ≠ scRNA pseudotime">一、為什麼 ST 的 trajectory 不只是 scRNA pseudotime？</h2>
+<div data-lang="zh">
+<p>scRNA 的 trajectory（Monocle3、Slingshot、scVelo）是<strong>「狀態空間」</strong>裡的一條線：把細胞從一個狀態變到另一個狀態的順序排出來。在 ST 上我們有一個天然的<strong>物理軸</strong>——例如「離血管多遠」、「距腫瘤邊緣多遠」、「沿皮層的深度」。</p>
+<p>因此 ST trajectory 有兩個層次：</p>
+<ul>
+<li><strong>cell-level trajectory</strong>：跟 scRNA 一樣的 pseudotime，但事後可以投回空間。</li>
+<li><strong>niche-level trajectory</strong>：把 niche 排序成一條空間連續的「微環境演進」（ONTraC、SpaceFlow）。</li>
+</ul>
+</div>
+<div data-lang="en">
+<p>scRNA trajectories (Monocle3, Slingshot, scVelo) live in <strong>"state space"</strong> — order cells from one state to another. ST gives us a natural <strong>physical axis</strong>: distance from a vessel, distance from a tumor margin, depth across cortical layers.</p>
+<p>So ST trajectory has two levels:</p>
+<ul>
+<li><strong>Cell-level trajectory</strong>: like scRNA pseudotime, projected back to space afterwards.</li>
+<li><strong>Niche-level trajectory</strong>: order niches into a spatially-contiguous "microenvironment progression" (ONTraC, SpaceFlow).</li>
+</ul>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="主流方法" data-en="METHODS">主流方法</h2>
+<h2 data-zh="二、主流工具" data-en="II. Main tools">二、主流工具</h2>
+<table class="comp-table">
+<thead><tr><th data-zh="工具" data-en="Tool">工具</th><th data-zh="層級" data-en="Level">層級</th><th data-zh="原理" data-en="Idea">原理</th></tr></thead>
+<tbody>
+<tr><td>Monocle3 / Slingshot</td><td data-lang="zh">cell</td><td data-lang="zh">scRNA 標準 pseudotime；事後投回空間</td><td data-lang="en">cell</td><td data-lang="en">Standard scRNA pseudotime; project back to space</td></tr>
+<tr><td>scVelo (with SpatialVelocity)</td><td data-lang="zh">cell</td><td data-lang="zh">RNA velocity 加上空間平滑</td><td data-lang="en">cell</td><td data-lang="en">RNA velocity with spatial smoothing</td></tr>
+<tr><td><strong>SpaceFlow</strong></td><td data-lang="zh">cell + spatial</td><td data-lang="zh">deep GNN + diffusion model 計算 pseudo-spatiotemporal map</td><td data-lang="en">cell + spatial</td><td data-lang="en">deep GNN + diffusion → pseudo-spatiotemporal map</td></tr>
+<tr><td><strong>stLearn PSTS</strong></td><td data-lang="zh">cell</td><td data-lang="zh">把 SME normalization + Diffusion pseudotime 合併</td><td data-lang="en">cell</td><td data-lang="en">SME normalization + Diffusion pseudotime</td></tr>
+<tr><td><strong>ONTraC</strong></td><td data-lang="zh">niche</td><td data-lang="zh">GNN 學 niche 連續軸；2025 Genome Biology</td><td data-lang="en">niche</td><td data-lang="en">GNN learns continuous niche axis; 2025 Genome Biology</td></tr>
+<tr><td>VIA</td><td data-lang="zh">cell</td><td data-lang="zh">scalable + 多分支軌跡</td><td data-lang="en">cell</td><td data-lang="en">Scalable + multi-branch trajectory</td></tr>
+</tbody></table>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="互動模擬" data-en="INTERACTIVE">互動模擬</div>
+<h2 data-zh="互動：沿著空間軸的 pseudotime 漸變" data-en="Interactive: pseudotime gradient along a spatial axis">互動：沿空間軸的 pseudotime 漸變</h2>
+<div data-lang="zh"><p>下方為模擬「傷口邊緣的修復細胞」場景。中央紅色為傷口；周圍細胞表達會根據與傷口距離形成漸變。切換不同模式觀察 pseudotime 投回空間後的 pattern。</p></div>
+<div data-lang="en"><p>Simulated "wound-margin healing cells" scene. Central red region = wound; surrounding cells express genes graded by distance to the wound. Switch modes to see pseudotime projected back into space.</p></div>
+<div class="interactive-panel">
+<div class="toggle-row">
+<button class="toggle-btn active" id="t_dist" data-zh="顯示與傷口距離" data-en="Distance to wound">顯示距離</button>
+<button class="toggle-btn" id="t_pt" data-zh="估算 pseudotime" data-en="Inferred pseudotime">估算 pseudotime</button>
+<button class="toggle-btn" id="t_marker" data-zh="顯示 marker 漸變" data-en="Marker gradient">marker 漸變</button>
+</div>
+<div class="canvas-container"><canvas id="trajCanvas" width="700" height="320"></canvas></div>
+</div>
+</section>
+
+<section class="section">
+<div class="section-label" data-zh="程式碼" data-en="CODE">程式碼</div>
+<h2 data-zh="實作" data-en="Implementation">實作</h2>
+<div class="code-tabs"><div class="code-tab-btns"><button class="code-tab-btn active" onclick="switchTab(this,'r1')">R / Monocle3 + Slingshot</button><button class="code-tab-btn" onclick="switchTab(this,'py1')">Python / SpaceFlow + ONTraC</button></div>
+<div class="code-tab-content active" id="r1"><pre><span class="comment"># 把 ST 物件轉到 cell 層級（image-based 直接；spot-based 先 deconvolution）</span>
+<span class="func">library</span>(monocle3)
+cds &lt;- <span class="func">new_cell_data_set</span>(counts(spe), cell_metadata = colData(spe))
+cds &lt;- <span class="func">preprocess_cds</span>(cds) |&gt; <span class="func">reduce_dimension</span>() |&gt; <span class="func">cluster_cells</span>()
+cds &lt;- <span class="func">learn_graph</span>(cds); cds &lt;- <span class="func">order_cells</span>(cds)
+spe$pseudotime &lt;- <span class="func">pseudotime</span>(cds)
+
+<span class="comment"># 投回空間</span>
+<span class="func">SpatialFeaturePlot</span>(<span class="func">as.Seurat</span>(spe), features = <span class="str">"pseudotime"</span>)</pre></div>
+<div class="code-tab-content" id="py1"><pre><span class="comment"># SpaceFlow</span>
+<span class="kw">from</span> SpaceFlow <span class="kw">import</span> SpaceFlow
+sf = SpaceFlow.SpaceFlow(adata=adata)
+sf.preprocessing_data(n_top_genes=<span class="num">3000</span>)
+sf.train(spatial_regularization_strength=<span class="num">0.1</span>); sf.segmentation(domain_label_save_filepath=<span class="str">"d.tsv"</span>)
+sf.pseudo_Spatiotemporal_Map()  <span class="comment"># pSM array in adata.obs</span>
+
+<span class="comment"># ONTraC: niche-level trajectory</span>
+<span class="comment"># ontrac CLI: ontrac --meta meta.tsv --st st.h5ad --output out/</span></pre></div>
+</div>
+</section>
+
+<section class="quiz-section">
+<h3>📝 <span data-zh="自我檢測" data-en="Self-Check">自我檢測</span></h3>
+<div class="quiz-q" data-answer="1">
+<p data-lang="zh">1. ST trajectory 跟 scRNA pseudotime 最大的不同是？</p>
+<p data-lang="en">1. Biggest difference between ST trajectory and scRNA pseudotime?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. ST 不能算 pseudotime</span><span data-lang="en">A. ST cannot compute pseudotime</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. ST 可以對應到實體空間軸（如離傷口距離）</span><span data-lang="en">B. ST can map to a physical axis (e.g. distance to wound)</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. scRNA 沒有 trajectory</span><span data-lang="en">C. scRNA has no trajectory</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. ST 不需要分群</span><span data-lang="en">D. ST doesn't need clustering</span></div>
+</div><div class="quiz-feedback" id="fb1"></div></div>
+
+<div class="quiz-q" data-answer="0">
+<p data-lang="zh">2. ONTraC 的核心特色？</p>
+<p data-lang="en">2. Defining feature of ONTraC?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. 在 niche 層級畫出連續的微環境演進</span><span data-lang="en">A. Continuous niche-level microenvironment trajectory</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. 取代 deconvolution</span><span data-lang="en">B. Replaces deconvolution</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. 取代 segmentation</span><span data-lang="en">C. Replaces segmentation</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. 取代 PCA</span><span data-lang="en">D. Replaces PCA</span></div>
+</div><div class="quiz-feedback" id="fb2"></div></div>
+
+<div class="quiz-q" data-answer="2">
+<p data-lang="zh">3. SpaceFlow 主要的輸出是？</p>
+<p data-lang="en">3. Main output of SpaceFlow?</p>
+<div class="quiz-options">
+<div class="quiz-opt" data-idx="0"><span data-lang="zh">A. cell type 標籤</span><span data-lang="en">A. Cell type labels</span></div>
+<div class="quiz-opt" data-idx="1"><span data-lang="zh">B. ligand-receptor pair</span><span data-lang="en">B. Ligand-receptor pairs</span></div>
+<div class="quiz-opt" data-idx="2"><span data-lang="zh">C. pseudo-spatiotemporal map (pSM)</span><span data-lang="en">C. Pseudo-spatiotemporal map (pSM)</span></div>
+<div class="quiz-opt" data-idx="3"><span data-lang="zh">D. UMAP</span><span data-lang="en">D. UMAP</span></div>
+</div><div class="quiz-feedback" id="fb3"></div></div>
+</section>
+
+<nav class="page-nav"><a href="niche.html"><span class="nav-dir" data-zh="← 上一步" data-en="← Prev">← 上一步</span><span class="nav-title">Step 11: Niche</span></a>
+<a href="multi-sample.html"><span class="nav-dir" data-zh="下一步 →" data-en="Next →">下一步 →</span><span class="nav-title">Step 13: Multi-sample</span></a>
+</nav>
+</main>
+<footer class="site-footer">© Charlene — Spatial Transcriptomics Interactive Tutorial</footer>
+<script src="i18n.js"></script>
+<script>
+window.addEventListener('scroll',()=>{const h=document.documentElement;document.getElementById('progressBar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%';});
+function switchTab(b,id){const p=b.closest('.code-tabs');p.querySelectorAll('.code-tab-btn').forEach(x=>x.classList.remove('active'));p.querySelectorAll('.code-tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(id).classList.add('active');}
+
+const W=700,H=320,CV=document.getElementById('trajCanvas'),CTX=CV.getContext('2d');
+const cells=[];
+const wound={x:W*0.5,y:H*0.5,r:38};
+for(let i=0;i<350;i++){
+  let x,y,d;
+  do{x=20+Math.random()*(W-40); y=20+Math.random()*(H-40); d=Math.hypot(x-wound.x,y-wound.y);}while(d<wound.r-2);
+  cells.push({x,y,d});
+}
+function ramp(v){
+  const t=Math.max(0,Math.min(1,v));
+  const r=Math.round(60+(232-60)*t);
+  const g=Math.round(40+(180-40)*t);
+  const b=Math.round(140-(110)*t);
+  return `rgb(${r},${g},${b})`;
+}
+function draw(mode){
+  CTX.clearRect(0,0,W,H);
+  // wound
+  CTX.beginPath(); CTX.arc(wound.x,wound.y,wound.r,0,Math.PI*2);
+  CTX.fillStyle='rgba(192,57,43,0.45)'; CTX.fill();
+  CTX.font='12px DM Sans,sans-serif'; CTX.fillStyle='#7a1f1f';
+  CTX.fillText(I18n.get()==='zh'?'傷口':'Wound', wound.x-15, wound.y+4);
+  const maxD = Math.hypot(W,H)/2;
+  cells.forEach(c=>{
+    let v;
+    if(mode==='dist') v = c.d/maxD;
+    else if(mode==='pt') v = 1 - c.d/maxD; // pseudotime: closer = late stage
+    else if(mode==='marker') v = Math.max(0,1 - c.d/180) * 0.9 + 0.05*Math.random();
+    CTX.beginPath(); CTX.arc(c.x,c.y,3.6,0,Math.PI*2);
+    CTX.fillStyle = ramp(v); CTX.fill();
+  });
+}
+function setMode(id){['t_dist','t_pt','t_marker'].forEach(b=>document.getElementById(b).classList.toggle('active',b===id));}
+document.getElementById('t_dist').onclick=()=>{setMode('t_dist');draw('dist');};
+document.getElementById('t_pt').onclick=()=>{setMode('t_pt');draw('pt');};
+document.getElementById('t_marker').onclick=()=>{setMode('t_marker');draw('marker');};
+draw('dist');
+
+const QF={
+  zh:{q1_y:'物理空間軸是 ST trajectory 的獨特優勢。',q1_n:'正確答案已標示。',q2_y:'ONTraC 在 niche 層級給出空間連續軸。',q2_n:'正確答案已標示。',q3_y:'pSM 是 SpaceFlow 的招牌輸出。',q3_n:'正確答案已標示。'},
+  en:{q1_y:'Physical spatial axis is unique to ST trajectory.',q1_n:'Correct answer highlighted.',q2_y:'ONTraC delivers a niche-level continuous axis.',q2_n:'Correct answer highlighted.',q3_y:'pSM is SpaceFlow\'s signature output.',q3_n:'Correct answer highlighted.'}
+};
+document.querySelectorAll('.quiz-q').forEach((q,qi)=>{const ans=+q.dataset.answer;q.querySelectorAll('.quiz-opt').forEach(o=>{o.addEventListener('click',()=>{if(q.classList.contains('answered'))return;q.classList.add('answered');const fb=document.getElementById('fb'+(qi+1));const ok=+o.dataset.idx===ans;o.classList.add(ok?'correct':'wrong');if(!ok)q.querySelectorAll('.quiz-opt')[ans].classList.add('correct');const L=I18n.get();fb.className='quiz-feedback show '+(ok?'correct-fb':'wrong-fb');fb.textContent=(ok?'✅ ':'❌ ')+(QF[L]['q'+(qi+1)+'_'+(ok?'y':'n')]||'');});});});
+</script>
+</body></html>
